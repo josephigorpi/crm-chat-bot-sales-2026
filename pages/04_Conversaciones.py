@@ -550,20 +550,26 @@ def main():
         # Generar QR simulado
         qr_data = f"payment_simulation_{datetime.now().strftime('%Y%m%d%H%M%S')}_100.00"
         qr_img = qrcode.make(qr_data)
-        
-        # Mostrar la imagen directamente (PIL Image)
+    
+        # SOLUCIÓN: Convertir PIL Image a bytes para Streamlit
+        import io
+        buffered = io.BytesIO()
+        qr_img.save(buffered, format="PNG")
+        qr_img_bytes = buffered.getvalue()
+    
+        # Mostrar la imagen usando los bytes
         st.image(
-            qr_img,
+            qr_img_bytes,
             caption="QR de Pago Simulado (Yape/Plin)",
             use_container_width=False,
             width=200
         )
-        
+    
         if st.button("✅ Confirmar Pago Simulado"):
             st.session_state.chat_messages.append({"role": "bot", "text": "¡Pago simulado confirmado! Tu pedido ha sido registrado. ¿Hay algo más en que pueda ayudarte?"})
             st.session_state.payment_step = 0
             st.rerun()
-    
+
     st.markdown("---")
     
     # Tabla de conversaciones
