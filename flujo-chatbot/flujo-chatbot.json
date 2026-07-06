@@ -1,0 +1,252 @@
+{
+  "name": "Chatbot Ventas IA",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "webhook-chatbot",
+        "responseMode": "onReceived"
+      },
+      "id": "webhook-entrada",
+      "name": "Webhook Entrada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.message }}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "regex",
+              "value2": "producto|comprar|precio|catalogo",
+              "output": 0
+            },
+            {
+              "operation": "regex",
+              "value2": "seguimiento|envio|pedido|tracking",
+              "output": 1
+            },
+            {
+              "operation": "regex",
+              "value2": "pagar|checkout|carrito|compra",
+              "output": 2
+            },
+            {
+              "operation": "regex",
+              "value2": "carrito|abandonado|continuar",
+              "output": 3
+            }
+          ]
+        }
+      },
+      "id": "router-mensajes",
+      "name": "Router Mensajes",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "chat",
+        "model": "gpt-4",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Eres un asistente de ventas amable y servicial. Analiza la intención del usuario y genera una respuesta útil. Identifica si el usuario quiere: consultar productos, hacer seguimiento de pedido, procesar pago, o recuperar carrito abandonado."
+          },
+          {
+            "role": "user",
+            "content": "={{ $json.message }}"
+          }
+        ],
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500
+        }
+      },
+      "id": "openai-analizar",
+      "name": "OpenAI Analizar",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO public.conversations (customer_id, session_id, message_text, message_type, intent, confidence_score) VALUES ($1, $2, $3, $4, $5, $6)",
+        "additionalFields": {
+          "queryParams": "={{ $json.customer_id }},{{ $json.session_id }},{{ $json.message }},user,{{ $json.intent }},{{ $json.confidence }}"
+        }
+      },
+      "id": "supabase-guardar-conversacion",
+      "name": "Supabase Guardar Conversación",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT p.* FROM products p WHERE p.active = true AND (p.name ILIKE '%' || $1 || '%' OR p.description ILIKE '%' || $1 || '%' OR $1 = ANY(p.tags)) LIMIT 5",
+        "additionalFields": {
+          "queryParams": "={{ $json.search_terms }}"
+        }
+      },
+      "id": "supabase-buscar-productos",
+      "name": "Supabase Buscar Productos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": {
+          "channel": "whatsapp",
+          "to": "={{ $json.phone ?? '' }}",
+          "type": "text",
+          "text": {
+            "body": "={{ `He encontrado estos productos para ti: \n\n` + ($json.products ?? []).map(p => `• ${p.name} - $${p.price}\n  ${p.description}\n`).join('\n') + `\n¿Te interesa alguno de estos productos?` }}"
+          }
+        }
+      },
+      "id": "whatsapp-enviar-respuesta",
+      "name": "WhatsApp Enviar Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM public.orders WHERE customer_id = $1 AND status = $2 ORDER BY created_at DESC",
+        "additionalFields": {
+          "queryParams": "={{ $json.customer_id }},shipped"
+        }
+      },
+      "id": "supabase-obtener-pedidos",
+      "name": "Supabase Obtener Pedidos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": {
+          "channel": "whatsapp",
+          "to": "={{ $json.phone ?? '' }}",
+          "type": "text",
+          "text": {
+            "body": "={{ `Aquí está el estado de tus pedidos:\n\n` + ($json.orders ?? []).map(o => `• Pedido #${(o.id ?? '').toString().slice(-8)} - ${o.status}\n  Total: $${o.total_amount}\n`).join('\n') }}"
+          }
+        }
+      },
+      "id": "whatsapp-enviar-seguimiento",
+      "name": "WhatsApp Enviar Seguimiento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [880, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Entrada": {
+      "main": [
+        [
+          {
+            "node": "Router Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Supabase Buscar Productos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase Obtener Pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI Analizar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI Analizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Analizar": {
+      "main": [
+        [
+          {
+            "node": "Supabase Guardar Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Buscar Productos": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Enviar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Obtener Pedidos": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Enviar Seguimiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Guardar Conversación": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Enviar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
