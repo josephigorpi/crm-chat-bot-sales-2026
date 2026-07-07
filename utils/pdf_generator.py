@@ -46,32 +46,20 @@ class ReportPDF(FPDF):
         if x_pos:
             self.set_x(x_pos)
         
-        y_position = self.get_y()
-        box_width = 50
-        box_height = 25
-    
-        # Dibujar el rectángulo
-        self.set_fill_color(240, 240, 240)
-        self.rect(x_position, y_position, box_width, box_height, 'F')
-        
-        # Dibujar borde
+       # Caja con borde
         self.set_draw_color(200, 200, 200)
-        self.rect(x_position, y_position, box_width, box_height, 'D')
+        self.set_fill_color(245, 245, 245)
+        self.rect(self.get_x(), self.get_y(), 45, 20, 'DF')
         
-        # Texto de la etiqueta (más pequeño)
-        self.set_font('Arial', 'B', 8)
-        self.set_xy(x_position + 2, y_position + 2)
-        self.cell(box_width - 4, 6, label, 0, 1, 'C')
-        
-        # Texto del valor (más grande)
+        # Texto del valor
         self.set_font('Arial', 'B', 12)
-        self.set_xy(x_position + 2, y_position + 10)
-        self.cell(box_width - 4, 10, str(value), 0, 1, 'C')
+        self.set_xy(self.get_x() + 2, self.get_y() + 3)
+        self.cell(41, 6, str(value), 0, 1, 'C')
         
-        # Restaurar posición Y
-        self.set_y(y_position + box_height)
-        
-        return x_position + box_width  # Retornar la siguiente posición X
+        # Etiqueta
+        self.set_font('Arial', '', 9)
+        self.set_x(self.get_x() + 2)
+        self.cell(41, 6, label, 0, 1, 'C')
         
     def add_table(self, headers, data, col_widths=None):
         """Añade una tabla al PDF"""
