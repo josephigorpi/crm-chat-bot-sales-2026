@@ -121,9 +121,9 @@ def generate_sales_report(data, start_date=None, end_date=None):
     
     # Añadir métricas en cajas
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Ventas", f"USD {total_sales:,.2f}")
-    pdf.add_metric_box("Total Pedidos", f"{total_orders}", next_x)
-    pdf.add_metric_box("Promedio", f"USD {avg_order:.2f}", next_x)
+    next_x = pdf.add_metric_box("Total Ventas", f"USD {total_sales:,.2f}")
+    next_x = pdf.add_metric_box("Total Pedidos", f"{total_orders}", next_x)
+    next_x = pdf.add_metric_box("Promedio", f"USD {avg_order:.2f}", next_x)
 
     # Mover Y después de las cajas
     pdf.set_y(y_pos + 25)
@@ -189,9 +189,9 @@ def generate_customer_report(data, start_date=None, end_date=None):
     ])
     
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Clientes", f"{total_customers}",)
-    pdf.add_metric_box("Activos", f"{active_customers}", next_x)
-    pdf.add_metric_box("Nuevos (30d)", f"{new_customers}", next_x)
+    next_x = pdf.add_metric_box("Total Clientes", f"{total_customers}",)
+    next_x = pdf.add_metric_box("Activos", f"{active_customers}", next_x)
+    next_x = pdf.add_metric_box("Nuevos (30d)", f"{new_customers}", next_x)
 
     pdf.set_y(y_pos + 25)
     
@@ -240,11 +240,11 @@ def generate_product_report(data, start_date=None, end_date=None):
     low_inventory = len(products_df[products_df['inventory_count'] < 10])
     
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Productos", f"{total_products}", 10)
-    pdf.set_xy(65, y_pos)
-    pdf.add_metric_box("Activos", f"{active_products}", 65)
-    pdf.set_xy(120, y_pos)
-    pdf.add_metric_box("Bajo Stock", f"{low_inventory}", 120)
+    next_x = pdf.add_metric_box("Total Productos", f"{total_products}")
+    next_x = pdf.add_metric_box("Activos", f"{active_products}", next_x)
+    next_x = pdf.add_metric_box("Bajo Stock", f"{low_inventory}", next_x)
+
+    pdf.set_y(y_pos + 25)
     
     pdf.ln(25)
     
@@ -310,11 +310,11 @@ def generate_chatbot_report(data, start_date=None, end_date=None):
     processed_rate = (conversations_df['processed'].sum() / total_conversations * 100)
     
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Conversaciones", f"{total_conversations}", 10)
-    pdf.set_xy(65, y_pos)
-    pdf.add_metric_box("Confianza Promedio", f"{avg_confidence:.2f}", 65)
-    pdf.set_xy(120, y_pos)
-    pdf.add_metric_box("Procesadas", f"{processed_rate:.1f}%", 120)
+    next_x = pdf.add_metric_box("Total Conversaciones", f"{total_conversations}")
+    next_x = pdf.add_metric_box("Confianza Promedio", f"{avg_confidence:.2f}", next_x)
+    next_x = pdf.add_metric_box("Procesadas", f"{processed_rate:.1f}%", next_x)
+
+    pdf.set_y(y_pos + 25)
     
     pdf.ln(25)
     
@@ -367,11 +367,11 @@ def generate_abandoned_carts_report(data, start_date=None, end_date=None):
     abandonment_rate = (abandoned_carts / total_carts * 100) if total_carts > 0 else 0
     
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Carritos Abandonados", f"{abandoned_carts}", 10)
-    pdf.set_xy(65, y_pos)
-    pdf.add_metric_box("Valor Perdido", f"USD {abandoned_value:,.0f}", 65)
-    pdf.set_xy(120, y_pos)
-    pdf.add_metric_box("Tasa Abandono", f"{abandonment_rate:.1f}%", 120)
+    next_x = pdf.add_metric_box("Carritos Abandonados", f"{abandoned_carts}")
+    next_x = pdf.add_metric_box("Valor Perdido", f"USD {abandoned_value:,.0f}", next_x)
+    next_x = pdf.add_metric_box("Tasa Abandono", f"{abandonment_rate:.1f}%", next_x)
+
+    pdf.set_y(y_pos + 25)
     
     pdf.ln(25)
     
