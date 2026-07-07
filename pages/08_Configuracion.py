@@ -325,6 +325,16 @@ def main():
             <div class="setting-title">🔔 Configuración de Notificaciones</div>
         </div>
         """, unsafe_allow_html=True)
+
+        # Verificar que la clave existe antes de acceder
+        if 'notifications' not in st.session_state.config_settings:
+            st.session_state.config_settings['notifications'] = {
+                'email_alerts': True,
+                'push_notifications': False,
+                'daily_reports': True,
+                'low_stock_alerts': True,
+                'new_customer_alerts': False
+            }
         
         notifications = st.session_state.config_settings['notifications']
         
