@@ -206,6 +206,12 @@ def initialize_session_state():
                 'data_retention': 365,
                 'export_format': 'CSV',
                 'anonymize_exports': True
+            },
+            'cart_reminders': {
+                'enabled': True,
+                'delay_seconds': 3600,  # 1 hora por defecto
+                'test_mode': False,
+                'message_template': "¡Hola {nombre}! Te recordamos que tienes un carrito pendiente de {valor}. ¡Completa tu compra ahora!"
             }
         }
     
@@ -220,6 +226,10 @@ def initialize_session_state():
             'api_calls_today': 1247,
             'errors_today': 3
         }
+    
+    # Estado para recordatorios automáticos
+    if 'cart_reminders_log' not in st.session_state:
+        st.session_state.cart_reminders_log = []
 
 def save_settings():
     """Simula el guardado de configuraciones"""
@@ -445,6 +455,69 @@ def main():
                 value=chatbot['response_delay'],
                 help="Simular tiempo de pensamiento humano"
             )
+        
+        # Recordatorios de carritos abandonados
+        st.markdown("""
+        <div class="config-section">
+            <div class="setting-title">🛒 Recordatorios de Carritos Abandonados</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        cart_reminders = st.session_state.config_settings['cart_reminders']
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            cart_reminders['enabled'] = st.checkbox(
+                "Habilitar Recordatorios Automáticos",
+                value=cart_reminders['enabled'],
+                help="Enviar recordatorios automáticos para carritos abandonados"
+            )
+            
+            cart_reminders['test_mode'] = st.checkbox(
+                "Modo Prueba (10 segundos de espera)",
+                value=cart_reminders['test_mode'],
+                help="Modo de prueba con espera muy corta para comprobar el funcionamiento"
+            )
+        
+        with col_b:
+            if cart_reminders['test_mode']:
+                st.info(f"ℹ️ Modo Prueba activado: Espera de 10 segundos")
+            else:
+                cart_reminders['delay_seconds'] = st.slider(
+                    "Tiempo de Espera para Recordatorio",
+                    min_value=60,  # 1 minuto
+                    max_value=86400,  # 24 horas
+                    value=cart_reminders['delay_seconds'],
+                    step=60,
+                    help="Tiempo que debe transcurrir desde el abandono para enviar el recordatorio"
+                )
+                # Convertir segundos a formato legible
+                hours = cart_reminders['delay_seconds'] // 3600
+                minutes = (cart_reminders['delay_seconds'] % 3600) // 60
+                st.markdown(f"**Tiempo configurado:** {hours}h {minutes}m")
+        
+        cart_reminders['message_template'] = st.text_area(
+            "Plantilla de Mensaje",
+            value=cart_reminders['message_template'],
+            help="Variables disponibles: {nombre}, {email}, {valor}, {productos}",
+            height=100
+        )
+        
+        # Log de recordatorios enviados
+        st.markdown("### 📋 Log de Recordatorios")
+        if st.session_state.cart_reminders_log:
+            for reminder in reversed(st.session_state.cart_reminders_log):
+                st.markdown(f"""
+                <div style="padding: 0.5rem; margin: 0.25rem 0; border-left: 4px solid #10b981; background: #f0fdf4;">
+                    <strong>[{reminder['timestamp']}]</strong> 
+                    <span style="color: #10b981; font-weight: bold;">ENVIADO</span><br>
+                    Cliente: {reminder['cliente']}<br>
+                    Valor: {reminder['valor']}
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Aún no se han enviado recordatorios automáticos.")
         
         # Seguridad
         st.markdown("""

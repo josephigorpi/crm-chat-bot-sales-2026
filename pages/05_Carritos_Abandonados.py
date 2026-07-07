@@ -8,7 +8,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from utils.data_generator import get_all_data
+from utils.data_generator import get_all_data, generate_test_abandoned_cart
+import time
+import json
 
 st.set_page_config(page_title="Carritos Abandonados", page_icon="🛒", layout="wide")
 
@@ -83,10 +85,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def load_cart_data():
-    """Carga y procesa los datos de carritos"""
+    """Carga y procesa los datos de carritos, usando session state para persistencia"""
     try:
-        data = get_all_data()
-        return data
+        if 'app_data' not in st.session_state:
+            st.session_state.app_data = get_all_data()
+        return st.session_state.app_data
     except Exception as e:
         st.error(f"Error al cargar datos: {str(e)}")
         return None
@@ -105,8 +108,9 @@ def calculate_abandonment_metrics(carts_df, customers_df, products_df):
     
     # Calcular tiempo desde abandono
     enriched_carts['created_at'] = pd.to_datetime(enriched_carts['created_at'])
+    enriched_carts['abandoned_at'] = pd.to_datetime(enriched_carts['abandoned_at'])
     enriched_carts['hours_since_abandonment'] = (
-        (datetime.now() - enriched_carts['created_at']).dt.total_seconds() / 3600
+        (datetime.now() - enriched_carts['abandoned_at']).dt.total_seconds() / 3600
     )
     
     # Categorizar por valor
@@ -161,6 +165,75 @@ def calculate_abandonment_metrics(carts_df, customers_df, products_df):
     enriched_carts['recovery_probability'] = enriched_carts.apply(calculate_recovery_probability, axis=1)
     
     return enriched_carts
+
+def check_and_send_reminders():
+    """Verifica y envía recordatorios automáticos según la configuración"""
+    # Obtener configuración
+    if 'config_settings' not in st.session_state:
+        return []
+    
+    config = st.session_state.config_settings.get('cart_reminders', {})
+    if not config.get('enabled', False):
+        return []
+    
+    # Obtener datos
+    data = st.session_state.app_data
+    carts_df = data['carts']
+    customers_df = data['customers']
+    
+    # Calcular tiempo de espera
+    delay_seconds = 10 if config.get('test_mode', False) else config.get('delay_seconds', 3600)
+    
+    # Filtrar carritos abandonados sin recordatorio
+    abandoned_carts = carts_df[
+        (carts_df['status'] == 'abandoned') & 
+        (~carts_df['recordatorio_enviado'])
+    ]
+    
+    sent_reminders = []
+    for _, cart in abandoned_carts.iterrows():
+        abandoned_at = pd.to_datetime(cart['abandoned_at'])
+        time_since_abandoned = (datetime.now() - abandoned_at).total_seconds()
+        
+        if time_since_abandoned >= delay_seconds:
+            # Enviar recordatorio
+            customer = customers_df[customers_df['id'] == cart['customer_id']].iloc[0]
+            
+            # Crear mensaje usando la plantilla
+            template = config.get('message_template', "¡Hola {nombre}! Te recordamos que tienes un carrito pendiente.")
+            message = template.format(
+                nombre=f"{customer['first_name']} {customer['last_name']}",
+                email=customer['email'],
+                valor=f"€{cart['total_amount']:.2f}",
+                productos=str(len(json.loads(cart['cart_items'])))
+            )
+            
+            # Marcar como enviado en el DataFrame
+            carts_df.loc[carts_df['id'] == cart['id'], 'recordatorio_enviado'] = True
+            
+            # Agregar al historial
+            reminder_data = {
+                'cart_id': cart['id'],
+                'cliente': f"{customer['first_name']} {customer['last_name']}",
+                'email': customer['email'],
+                'valor': cart['total_amount'],
+                'mensaje': message,
+                'fecha': datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            }
+            
+            st.session_state.sent_reminders.append(reminder_data)
+            sent_reminders.append(reminder_data)
+            
+            # También actualizar el log en la página de configuración
+            if 'cart_reminders_log' not in st.session_state:
+                st.session_state.cart_reminders_log = []
+            st.session_state.cart_reminders_log.append({
+                'timestamp': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                'cliente': f"{customer['first_name']} {customer['last_name']}",
+                'valor': f"€{cart['total_amount']:.2f}"
+            })
+    
+    return sent_reminders
 
 def create_abandonment_funnel(carts_df):
     """Crea embudo de abandono de carritos"""
@@ -304,6 +377,17 @@ def main():
     if 'sent_reminders' not in st.session_state:
         st.session_state.sent_reminders = []
     
+    # Initialize config settings if not present (for consistency with Config page)
+    if 'config_settings' not in st.session_state:
+        st.session_state.config_settings = {
+            'cart_reminders': {
+                'enabled': True,
+                'delay_seconds': 3600,
+                'test_mode': False,
+                'message_template': "¡Hola {nombre}! Te recordamos que tienes un carrito pendiente de {valor}. ¡Completa tu compra ahora!"
+            }
+        }
+    
     # Cargar datos
     data = load_cart_data()
     if data is None:
@@ -312,6 +396,28 @@ def main():
     carts_df = data['carts']
     customers_df = data['customers']
     products_df = data['products']
+    
+    # Botón para generar carrito de prueba
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("🧪 Generar Carrito de Prueba", type="primary"):
+            test_cart = generate_test_abandoned_cart(customers_df, products_df)
+            # Convertir el dict a una fila del DataFrame
+            new_cart_row = pd.DataFrame([test_cart])
+            # Concatenar con el DataFrame existente
+            st.session_state.app_data['carts'] = pd.concat(
+                [carts_df, new_cart_row],
+                ignore_index=True
+            )
+            st.success(f"✅ Carrito de prueba generado: {test_cart['id']}")
+            st.rerun()
+    
+    with col2:
+        # Verificar y enviar recordatorios
+        sent_reminders = check_and_send_reminders()
+        if sent_reminders:
+            for reminder in sent_reminders:
+                st.toast(f"📨 Recordatorio enviado a {reminder['cliente']}!")
     
     # Calcular métricas de abandono
     enriched_carts = calculate_abandonment_metrics(carts_df, customers_df, products_df)
@@ -514,8 +620,8 @@ def main():
     priority_carts = priority_carts.sort_values('priority_score', ascending=False).head(10)
     
     for _, cart in priority_carts.iterrows():
-        # Check if reminder was already sent from session state
-        reminder_sent = any(r['cart_id'] == cart['id'] for r in st.session_state.sent_reminders)
+        # Check if reminder was already sent from DataFrame
+        reminder_sent = cart['recordatorio_enviado']
         
         # Determinar clase CSS basada en valor
         if cart['value_category'] == 'Alto Valor':

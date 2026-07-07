@@ -377,7 +377,6 @@ def generate_recommendations(customers_df, products_df, n=100):
     
     return pd.DataFrame(recommendations)
 
-@st.cache_data
 def get_all_data():
     """Genera y retorna todos los datasets"""
     print("Generando datos falsos...")
@@ -399,6 +398,42 @@ def get_all_data():
         'orders': orders,
         'shipments': shipments,
         'recommendations': recommendations
+    }
+
+def generate_test_abandoned_cart(customers_df, products_df):
+    """Genera un carrito abandonado de prueba justo ahora"""
+    customer_id = random.choice(customers_df['id'].tolist())
+    
+    # Generar items del carrito
+    num_items = random.randint(1, 3)
+    cart_items = []
+    total_amount = 0
+    selected_products = random.sample(products_df.to_dict('records'), num_items)
+    for product in selected_products:
+        quantity = random.randint(1, 2)
+        item_total = product['price'] * quantity
+        total_amount += item_total
+        cart_items.append({
+            'product_id': product['id'],
+            'product_name': product['name'],
+            'quantity': quantity,
+            'unit_price': product['price'],
+            'total_price': item_total
+        })
+    
+    created_at = datetime.now()
+    abandoned_at = created_at
+    
+    return {
+        'id': str(uuid.uuid4()),
+        'customer_id': customer_id,
+        'session_id': f"test_session_{fake.random_number(digits=10)}",
+        'cart_items': json.dumps(cart_items),
+        'total_amount': round(total_amount, 2),
+        'status': 'abandoned',
+        'created_at': created_at,
+        'abandoned_at': abandoned_at,
+        'recordatorio_enviado': False
     }
 
 # Función auxiliar para obtener métricas calculadas
