@@ -41,25 +41,35 @@ class ReportPDF(FPDF):
         self.cell(0, 8, subtitle, 0, 1, 'L')
         self.ln(3)
         
-    def add_metric_box(self, label, value, x_pos=None):
-        """Añade una caja de métrica"""
-        if x_pos:
+    def add_metric_box(self, label, value, x_pos=None, box_width=50, box_height=22):
+        """Añade una caja de métrica y retorna la siguiente posición X"""
+        # Guardar posición Y actual
+        y_pos = self.get_y()
+    
+        # Establecer posición X si se proporciona
+        if x_pos is not None:
             self.set_x(x_pos)
+    
+        # Guardar posición X actual
+        x_pos = self.get_x()
         
-       # Caja con borde
+        # Caja con borde
         self.set_draw_color(200, 200, 200)
         self.set_fill_color(245, 245, 245)
-        self.rect(self.get_x(), self.get_y(), 45, 20, 'DF')
-        
-        # Texto del valor
+        self.rect(x_pos, y_pos, box_width, box_height, 'DF')
+    
+        # Texto del valor (más grande, en la parte superior)
         self.set_font('Arial', 'B', 12)
-        self.set_xy(self.get_x() + 2, self.get_y() + 3)
-        self.cell(41, 6, str(value), 0, 1, 'C')
-        
-        # Etiqueta
-        self.set_font('Arial', '', 9)
-        self.set_x(self.get_x() + 2)
-        self.cell(41, 6, label, 0, 1, 'C')
+        self.set_xy(x_pos + 2, y_pos + 2)
+        self.cell(box_width - 4, 8, str(value), 0, 1, 'C')
+    
+        # Etiqueta (más pequeña, en la parte inferior)
+        self.set_font('Arial', '', 8)
+        self.set_xy(x_pos + 2, y_pos + 11)
+        self.cell(box_width - 4, 6, label, 0, 1, 'C')
+    
+        # Retornar la siguiente posición X
+        return x_pos + box_width + 5  # +5 de padding entre cajas
         
     def add_table(self, headers, data, col_widths=None):
         """Añade una tabla al PDF"""
@@ -111,11 +121,12 @@ def generate_sales_report(data, start_date=None, end_date=None):
     
     # Añadir métricas en cajas
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Ventas", f"USD {total_sales:,.2f}", 10)
-    pdf.set_xy(65, y_pos)
-    pdf.add_metric_box("Total Pedidos", f"{total_orders}", 65)
-    pdf.set_xy(120, y_pos)
-    pdf.add_metric_box("Promedio", f"USD {avg_order:.2f}", 120)
+    pdf.add_metric_box("Total Ventas", f"USD {total_sales:,.2f}")
+    pdf.add_metric_box("Total Pedidos", f"{total_orders}", next_x)
+    pdf.add_metric_box("Promedio", f"USD {avg_order:.2f}", next_x)
+
+    # Mover Y después de las cajas
+    pdf.set_y(y_pos + 25)
     
     pdf.ln(25)
     
@@ -178,11 +189,11 @@ def generate_customer_report(data, start_date=None, end_date=None):
     ])
     
     y_pos = pdf.get_y()
-    pdf.add_metric_box("Total Clientes", f"{total_customers}", 10)
-    pdf.set_xy(65, y_pos)
-    pdf.add_metric_box("Activos", f"{active_customers}", 65)
-    pdf.set_xy(120, y_pos)
-    pdf.add_metric_box("Nuevos (30d)", f"{new_customers}", 120)
+    pdf.add_metric_box("Total Clientes", f"{total_customers}",)
+    pdf.add_metric_box("Activos", f"{active_customers}", next_x)
+    pdf.add_metric_box("Nuevos (30d)", f"{new_customers}", next_x)
+
+    pdf.set_y(y_pos + 25)
     
     pdf.ln(25)
     
