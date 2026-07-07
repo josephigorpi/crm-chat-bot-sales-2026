@@ -561,7 +561,7 @@ def main():
         st.image(
             qr_img_bytes,
             caption="QR de Pago Simulado (Yape/Plin)",
-            use_container_width=False,
+            use_column_width=False,
             width=200
         )
     
