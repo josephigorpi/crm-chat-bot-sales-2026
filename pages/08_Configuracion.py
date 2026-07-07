@@ -170,51 +170,67 @@ st.markdown("""
 
 def initialize_session_state():
     """Inicializa el estado de la sesión para configuraciones"""
-    if 'config_settings' not in st.session_state:
-        st.session_state.config_settings = {
-            'notifications': {
-                'email_alerts': True,
-                'push_notifications': False,
-                'daily_reports': True,
-                'low_stock_alerts': True,
-                'new_customer_alerts': False
-            },
-            'dashboard': {
-                'auto_refresh': True,
-                'refresh_interval': 30,
-                'default_date_range': 30,
-                'show_animations': True,
-                'compact_mode': False
-            },
-            'chatbot': {
-                'auto_responses': True,
-                'learning_mode': True,
-                'escalation_threshold': 3,
-                'response_delay': 1,
-                'multilingual': False
-            },
-            'security': {
-                'two_factor_auth': False,
-                'session_timeout': 60,
-                'password_expiry': 90,
-                'login_attempts': 3,
-                'audit_logging': True
-            },
-            'data': {
-                'auto_backup': True,
-                'backup_frequency': 'daily',
-                'data_retention': 365,
-                'export_format': 'CSV',
-                'anonymize_exports': True
-            },
-            'cart_reminders': {
-                'enabled': True,
-                'delay_seconds': 3600,  # 1 hora por defecto
-                'test_mode': False,
-                'message_template': "¡Hola {nombre}! Te recordamos que tienes un carrito pendiente de {valor}. ¡Completa tu compra ahora!"
-            }
-        }
     
+    # Configuración por defecto completa
+    default_config = {
+        'notifications': {
+            'email_alerts': True,
+            'push_notifications': False,
+            'daily_reports': True,
+            'low_stock_alerts': True,
+            'new_customer_alerts': False
+        },
+        'dashboard': {
+            'auto_refresh': True,
+            'refresh_interval': 30,
+            'default_date_range': 30,
+            'show_animations': True,
+            'compact_mode': False
+        },
+        'chatbot': {
+            'auto_responses': True,
+            'learning_mode': True,
+            'escalation_threshold': 3,
+            'response_delay': 1,
+            'multilingual': False
+        },
+        'security': {
+            'two_factor_auth': False,
+            'session_timeout': 60,
+            'password_expiry': 90,
+            'login_attempts': 3,
+            'audit_logging': True
+        },
+        'data': {
+            'auto_backup': True,
+            'backup_frequency': 'daily',
+            'data_retention': 365,
+            'export_format': 'CSV',
+            'anonymize_exports': True
+        },
+        'cart_reminders': {
+            'enabled': True,
+            'delay_seconds': 3600,
+            'test_mode': False,
+            'message_template': "¡Hola {nombre}! Te recordamos que tienes un carrito pendiente de {valor}. ¡Completa tu compra ahora!"
+        }
+    }
+    
+    # Si no existe config_settings, crearlo con los valores por defecto
+    if 'config_settings' not in st.session_state:
+        st.session_state.config_settings = default_config
+    else:
+        # Verificar que todas las claves existan y agregar las que falten
+        for key, default_value in default_config.items():
+            if key not in st.session_state.config_settings:
+                st.session_state.config_settings[key] = default_value
+            elif isinstance(default_value, dict):
+                # Verificar claves anidadas
+                for sub_key, sub_default in default_value.items():
+                    if sub_key not in st.session_state.config_settings[key]:
+                        st.session_state.config_settings[key][sub_key] = sub_default
+    
+    # System info
     if 'system_info' not in st.session_state:
         st.session_state.system_info = {
             'version': '1.0.0',
@@ -227,7 +243,7 @@ def initialize_session_state():
             'errors_today': 3
         }
     
-    # Estado para recordatorios automáticos
+    # Log de recordatorios
     if 'cart_reminders_log' not in st.session_state:
         st.session_state.cart_reminders_log = []
 
