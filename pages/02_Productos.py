@@ -13,8 +13,7 @@ from utils.chart_utils import create_top_products_chart, create_price_distributi
 st.set_page_config(page_title="Productos", page_icon="📦", layout="wide")
 
 # Verificar autenticación
-if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.switch_page("app.py")
+st.page_link("app.py", label="Volver a dash")
 
 # CSS personalizado
 st.markdown("""
