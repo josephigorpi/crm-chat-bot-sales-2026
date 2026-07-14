@@ -14,7 +14,7 @@ st.set_page_config(page_title="Productos", page_icon="📦", layout="wide")
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.switch_page("login.py")
+    st.switch_page("app.py")
 
 # CSS personalizado
 st.markdown("""
