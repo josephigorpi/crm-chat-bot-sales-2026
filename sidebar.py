@@ -35,7 +35,7 @@ def sidebar_navigation():
         - 📦 **06_Pedidos_y_Envios**: Gestión de órdenes
         - 📊 **07_Reportes**: Generación de informes
         - ⚙️ **08_Configuracion**: Ajustes del sistema
-        """))
+        """)
         
         st.markdown("---")
         
