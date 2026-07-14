@@ -10,9 +10,20 @@ import plotly.graph_objects as go
 from utils.data_generator import get_all_data
 from utils.chart_utils import create_top_products_chart, create_price_distribution, create_category_donut
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sidebar import sidebar_navigation
+
+
 st.set_page_config(page_title="Productos", page_icon="📦", layout="wide")
 
+# Verificar autenticación
+if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+    st.switch_page("app.py")
 
+# ✅ Mostrar el sidebar
+sidebar_navigation()
 
 # CSS personalizado
 st.markdown("""
