@@ -35,7 +35,27 @@ def sidebar_navigation():
         - 📦 **06_Pedidos_y_Envios**: Gestión de órdenes
         - 📊 **07_Reportes**: Generación de informes
         - ⚙️ **08_Configuracion**: Ajustes del sistema
-        """)
+        """))
+        
+        st.markdown("---")
+        
+        # ✅ NUEVO: Botón de modo oscuro/claro
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("### 🌓 Tema")
+        with col2:
+            # Inicializar estado del tema si no existe
+            if 'dark_mode' not in st.session_state:
+                st.session_state.dark_mode = False
+            
+            # Botón toggle con ícono dinámico
+            icon = "🌙" if not st.session_state.dark_mode else "☀️"
+            label = "Oscuro" if not st.session_state.dark_mode else "Claro"
+            
+            if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle"):
+                st.session_state.dark_mode = not st.session_state.dark_mode
+                st.rerun()
+        
         
         st.markdown("---")
         
