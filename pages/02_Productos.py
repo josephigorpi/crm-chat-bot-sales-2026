@@ -1,6 +1,6 @@
 """
 Página de Análisis de Productos
-Gestión y análisis completo de productos
+Gestión y análisis completo de productos con soporte para tema e idioma
 """
 
 import streamlit as st
@@ -9,6 +9,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from utils.data_generator import get_all_data
 from utils.chart_utils import create_top_products_chart, create_price_distribution, create_category_donut
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 import sys
 import os
@@ -18,6 +20,14 @@ from sidebar import sidebar_navigation
 
 st.set_page_config(page_title="Productos", page_icon="📦", layout="wide")
 
+# ✅ Inyectar CSS dinámico del tema
+inject_theme_css()
+
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
+
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     st.switch_page("app.py")
@@ -25,77 +35,13 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 # ✅ Mostrar el sidebar
 sidebar_navigation()
 
-# CSS personalizado
-st.markdown("""
-<style>
-    .product-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .filter-container {
-        background: #f8fafc;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 2rem;
-        color: #1f2937;
-    }
-    
-    .metric-box {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        text-align: center;
-        border-left: 4px solid #3b82f6;
-        color: #1f2937;
-    }
-    
-    .alert-box {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
-        color: #1f2937;
-    }
-    
-    .success-box {
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
-        color: #1f2937;
-    }
-    
-    .add-product-form {
-        background: #f8fafc;
-        padding: 2rem;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        margin: 2rem 0;
-        color: #1f2937;
-    }
-    
-    .form-header {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        margin-bottom: 1.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 def load_products_data():
-    """Carga y procesa los datos de productos con session_state para persistencia"""
+    """
+    Carga y procesa los datos de productos con session_state para persistencia.
+    
+    Returns:
+        Dict con datos de productos o None si hay error
+    """
     try:
         # Inicializar session_state para productos si no existe
         if 'products_data' not in st.session_state:
@@ -108,7 +54,7 @@ def load_products_data():
         
         # Debug: mostrar información sobre productos agregados
         if st.session_state.added_products:
-            st.info(f"🔍 Debug: Se encontraron {len(st.session_state.added_products)} productos agregados en session_state")
+            st.info(f"🔍 Debug: {get_string('products_debug_added', st.session_state.language, count=len(st.session_state.added_products))}")
             # Convertir productos agregados a DataFrame
             added_df = pd.DataFrame(st.session_state.added_products)
             # Combinar con productos originales
@@ -117,7 +63,7 @@ def load_products_data():
             combined_products = original_products
         
         # Debug: mostrar total de productos
-        st.info(f"🔍 Debug: Total de productos (originales + agregados): {len(combined_products)}")
+        st.info(f"🔍 {get_string('products_debug_total', st.session_state.language, count=len(combined_products))}")
         
         # Actualizar los datos con la lista combinada
         updated_data = st.session_state.products_data.copy()
@@ -125,48 +71,59 @@ def load_products_data():
         
         return updated_data
     except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
+        st.error(f"{get_string('products_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def create_low_inventory_alert(products_df, threshold=10):
-    """Crea alerta de productos con bajo inventario"""
+    """
+    Crea alerta de productos con bajo inventario.
+    
+    Args:
+        products_df: DataFrame con productos
+        threshold: Umbral de inventario bajo
+    """
     low_stock = products_df[products_df['inventory_count'] < threshold]
     
     if len(low_stock) > 0:
         st.markdown(f"""
         <div class="alert-box">
-            <h4>⚠️ Alerta de Inventario Bajo</h4>
-            <p><strong>{len(low_stock)} productos</strong> tienen menos de {threshold} unidades en stock.</p>
+            <h4>{get_string('products_low_inventory_alert', st.session_state.language)}</h4>
+            <p><strong>{len(low_stock)} {get_string('products_low_inventory_text', st.session_state.language, count=len(low_stock), threshold=threshold)}</strong></p>
         </div>
         """, unsafe_allow_html=True)
         
         # Mostrar productos con bajo stock
-        with st.expander(f"Ver {len(low_stock)} productos con bajo inventario"):
+        with st.expander(get_string('products_low_inventory_show', st.session_state.language, count=len(low_stock))):
             display_low_stock = low_stock[['name', 'category', 'inventory_count', 'price']].copy()
-            display_low_stock['Producto'] = display_low_stock['name']
-            display_low_stock['Categoría'] = display_low_stock['category'].str.title()
-            display_low_stock['Stock'] = display_low_stock['inventory_count']
-            display_low_stock['Precio'] = display_low_stock['price'].apply(lambda x: f"€{x:.2f}")
+            display_low_stock[get_string('products_table_product', st.session_state.language)] = display_low_stock['name']
+            display_low_stock[get_string('products_table_category', st.session_state.language)] = display_low_stock['category'].str.title()
+            display_low_stock[get_string('products_table_inventory', st.session_state.language)] = display_low_stock['inventory_count']
+            display_low_stock[get_string('products_table_price', st.session_state.language)] = display_low_stock['price'].apply(lambda x: f"€{x:.2f}")
             
             st.dataframe(
-                display_low_stock[['Producto', 'Categoría', 'Stock', 'Precio']],
+                display_low_stock[[
+                    get_string('products_table_product', st.session_state.language),
+                    get_string('products_table_category', st.session_state.language),
+                    get_string('products_table_inventory', st.session_state.language),
+                    get_string('products_table_price', st.session_state.language)
+                ]],
                 use_container_width=True,
                 hide_index=True
             )
     else:
-        st.markdown("""
+        st.markdown(f"""
         <div class="success-box">
-            <h4>✅ Inventario Saludable</h4>
-            <p>Todos los productos tienen stock suficiente.</p>
+            <h4>{get_string('products_inventory_healthy', st.session_state.language)}</h4>
+            <p>{get_string('products_inventory_healthy_text', st.session_state.language)}</p>
         </div>
         """, unsafe_allow_html=True)
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="product-header">
-        <h1>📦 Análisis de Productos</h1>
-        <p>Gestión completa del catálogo de productos y análisis de performance</p>
+        <h1>{get_string('products_title', st.session_state.language)}</h1>
+        <p>{get_string('products_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -176,9 +133,10 @@ def main():
         return
     
     products_df = data['products']
+    chart_template = get_plotly_template()
     
     # Sección de filtros
-    st.markdown("### 🔍 Filtros y Búsqueda")
+    st.markdown(f"### {get_string('products_filters', st.session_state.language)}")
     
     with st.container():
         st.markdown('<div class="filter-container">', unsafe_allow_html=True)
@@ -187,15 +145,18 @@ def main():
         
         with col1:
             # Filtro por categoría
-            categories = ['Todas'] + list(products_df['category'].unique())
-            selected_category = st.selectbox("Categoría", categories)
+            categories = [get_string('products_filter_category_all', st.session_state.language)] + list(products_df['category'].unique())
+            selected_category = st.selectbox(
+                get_string('products_filter_category', st.session_state.language),
+                categories
+            )
         
         with col2:
             # Filtro por rango de precio
             min_price = float(products_df['price'].min())
             max_price = float(products_df['price'].max())
             price_range = st.slider(
-                "Rango de Precio (€)", 
+                get_string('products_filter_price', st.session_state.language),
                 min_value=min_price, 
                 max_value=max_price, 
                 value=(min_price, max_price)
@@ -203,24 +164,34 @@ def main():
         
         with col3:
             # Filtro por estado
-            status_options = ['Todos', 'Activos', 'Inactivos']
-            selected_status = st.selectbox("Estado", status_options)
+            status_options = [
+                get_string('products_filter_status_all', st.session_state.language),
+                get_string('products_filter_status_active', st.session_state.language),
+                get_string('products_filter_status_inactive', st.session_state.language)
+            ]
+            selected_status = st.selectbox(
+                get_string('products_filter_status', st.session_state.language),
+                status_options
+            )
         
         with col4:
             # Buscador
-            search_term = st.text_input("🔍 Buscar producto", placeholder="Nombre del producto...")
+            search_term = st.text_input(
+                get_string('products_search', st.session_state.language),
+                placeholder=get_string('products_search_placeholder', st.session_state.language)
+            )
         
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Sección para agregar nuevos productos
-    st.markdown("### ➕ Agregar Nuevo Producto")
+    st.markdown(f"### {get_string('products_add_new', st.session_state.language)}")
     
-    with st.expander("🆕 Formulario para Agregar Producto", expanded=True):
-        st.markdown("""
+    with st.expander(get_string('products_add_form_title', st.session_state.language), expanded=True):
+        st.markdown(f"""
         <div class="add-product-form">
             <div class="form-header">
-                <h3>📦 Nuevo Producto</h3>
-                <p>Complete la información del producto</p>
+                <h3>{get_string('products_add_form_header', st.session_state.language)}</h3>
+                <p>{get_string('products_add_form_subtitle', st.session_state.language)}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -229,19 +200,38 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                product_name = st.text_input("Nombre del Producto *", placeholder="Ej: iPhone 15 Pro")
+                product_name = st.text_input(
+                    get_string('products_add_name', st.session_state.language),
+                    placeholder=get_string('products_add_name_placeholder', st.session_state.language)
+                )
                 product_category = st.selectbox(
-                    "Categoría *", 
+                    get_string('products_add_category', st.session_state.language),
                     options=['electronics', 'clothing', 'books', 'home', 'sports', 'beauty']
                 )
-                product_price = st.number_input("Precio (USD) *", min_value=0.01, value=100.00, step=0.01)
+                product_price = st.number_input(
+                    get_string('products_add_price', st.session_state.language),
+                    min_value=0.01,
+                    value=100.00,
+                    step=0.01
+                )
             
             with col2:
-                product_inventory = st.number_input("Cantidad en Inventario *", min_value=0, value=50, step=1)
-                product_active = st.checkbox("Producto Activo", value=True)
-                product_description = st.text_area("Descripción", placeholder="Descripción del producto...")
+                product_inventory = st.number_input(
+                    get_string('products_add_inventory', st.session_state.language),
+                    min_value=0,
+                    value=50,
+                    step=1
+                )
+                product_active = st.checkbox(get_string('products_add_active', st.session_state.language), value=True)
+                product_description = st.text_area(
+                    get_string('products_add_description', st.session_state.language),
+                    placeholder=get_string('products_add_description_placeholder', st.session_state.language)
+                )
             
-            submitted = st.form_submit_button("✅ Agregar Producto", use_container_width=True)
+            submitted = st.form_submit_button(
+                get_string('products_add_button', st.session_state.language),
+                use_container_width=True
+            )
             
             if submitted:
                 if product_name and product_category and product_price > 0:
@@ -259,30 +249,31 @@ def main():
                     # Agregar a la lista de productos agregados
                     st.session_state.added_products.append(new_product)
                     
-                    st.success(f"✅ Producto '{product_name}' agregado exitosamente!")
-                    st.info("💡 El producto se ha agregado a la lista y será visible inmediatamente.")
+                    st.success(get_string('products_add_success', st.session_state.language, name=product_name))
+                    st.info(get_string('products_add_info', st.session_state.language))
                     
                     # Mostrar resumen del producto agregado
-                    st.markdown("**📋 Resumen del Producto Agregado:**")
+                    st.markdown(get_string('products_add_summary', st.session_state.language))
                     col1, col2 = st.columns(2)
                     with col1:
-                        st.write(f"**Nombre:** {product_name}")
-                        st.write(f"**Categoría:** {product_category.title()}")
-                        st.write(f"**Precio:** USD {product_price:.2f}")
+                        st.write(f"**{get_string('products_add_name_label', st.session_state.language)}** {product_name}")
+                        st.write(f"**{get_string('products_add_category_label', st.session_state.language)}** {product_category.title()}")
+                        st.write(f"**{get_string('products_add_price_label', st.session_state.language)}** USD {product_price:.2f}")
                     with col2:
-                        st.write(f"**Inventario:** {product_inventory} unidades")
-                        st.write(f"**Estado:** {'Activo' if product_active else 'Inactivo'}")
-                        st.write(f"**Descripción:** {product_description if product_description else 'Sin descripción'}")
+                        st.write(f"**{get_string('products_add_inventory_label', st.session_state.language)}** {product_inventory} {get_string('products_add_units', st.session_state.language)}")
+                        status_text = get_string('products_add_status_active', st.session_state.language) if product_active else get_string('products_add_status_inactive', st.session_state.language)
+                        st.write(f"**{get_string('products_add_status_label', st.session_state.language)}** {status_text}")
+                        st.write(f"**{get_string('products_add_description_label', st.session_state.language)}** {product_description if product_description else get_string('products_add_no_description', st.session_state.language)}")
                     
                     # Forzar rerun para actualizar la página
                     st.rerun()
                 else:
-                    st.error("❌ Por favor complete todos los campos obligatorios (*)")
+                    st.error(get_string('products_add_error', st.session_state.language))
     
     # Aplicar filtros
     filtered_df = products_df.copy()
     
-    if selected_category != 'Todas':
+    if selected_category != get_string('products_filter_category_all', st.session_state.language):
         filtered_df = filtered_df[filtered_df['category'] == selected_category]
     
     filtered_df = filtered_df[
@@ -290,9 +281,9 @@ def main():
         (filtered_df['price'] <= price_range[1])
     ]
     
-    if selected_status == 'Activos':
+    if selected_status == get_string('products_filter_status_active', st.session_state.language):
         filtered_df = filtered_df[filtered_df['active'] == True]
-    elif selected_status == 'Inactivos':
+    elif selected_status == get_string('products_filter_status_inactive', st.session_state.language):
         filtered_df = filtered_df[filtered_df['active'] == False]
     
     if search_term:
@@ -301,44 +292,44 @@ def main():
         ]
     
     # Métricas de productos
-    st.markdown("### 📊 Métricas de Productos")
+    st.markdown(f"### {get_string('products_metrics', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>{}</h3>
-            <p>Total Productos</p>
+            <h3>{len(filtered_df)}</h3>
+            <p>{get_string('products_metric_total', st.session_state.language)}</p>
         </div>
-        """.format(len(filtered_df)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
         active_products = len(filtered_df[filtered_df['active'] == True])
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>{}</h3>
-            <p>Productos Activos</p>
+            <h3>{active_products}</h3>
+            <p>{get_string('products_metric_active', st.session_state.language)}</p>
         </div>
-        """.format(active_products), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         avg_price = filtered_df['price'].mean()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>€{:.2f}</h3>
-            <p>Precio Promedio</p>
+            <h3>€{avg_price:.2f}</h3>
+            <p>{get_string('products_metric_avg_price', st.session_state.language)}</p>
         </div>
-        """.format(avg_price), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
         total_inventory = filtered_df['inventory_count'].sum()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>{:,}</h3>
-            <p>Total Inventario</p>
+            <h3>{total_inventory:,}</h3>
+            <p>{get_string('products_metric_total_inventory', st.session_state.language)}</p>
         </div>
-        """.format(total_inventory), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -346,25 +337,25 @@ def main():
     create_low_inventory_alert(filtered_df)
     
     # Visualizaciones
-    st.markdown("### 📈 Análisis Visual")
+    st.markdown(f"### {get_string('products_analysis', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
     with col1:
         # Top productos más vendidos (simulado)
-        top_products_chart = create_top_products_chart(filtered_df, data['orders'])
+        top_products_chart = create_top_products_chart(filtered_df, data['orders'], chart_template, st.session_state.language)
         st.plotly_chart(top_products_chart, use_container_width=True)
     
     with col2:
         # Distribución de precios
-        price_dist_chart = create_price_distribution(filtered_df)
+        price_dist_chart = create_price_distribution(filtered_df, chart_template, st.session_state.language)
         st.plotly_chart(price_dist_chart, use_container_width=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
         # Productos por categoría
-        category_chart = create_category_donut(filtered_df)
+        category_chart = create_category_donut(filtered_df, chart_template, st.session_state.language)
         st.plotly_chart(category_chart, use_container_width=True)
     
     with col2:
@@ -375,20 +366,20 @@ def main():
             inventory_by_category,
             x='category',
             y='inventory_count',
-            title='Inventario Total por Categoría',
+            title=get_string('chart_inventory_by_category', st.session_state.language),
             color='inventory_count',
             color_continuous_scale='Blues'
         )
         
         fig.update_traces(
-            hovertemplate='<b>%{x}</b><br>Inventario: %{y}<extra></extra>'
+            hovertemplate='<b>%{x}</b><br>' + get_string('chart_inventory_stock', st.session_state.language) + ': %{y}<extra></extra>'
         )
         
         fig.update_layout(
             height=400,
-            template="plotly_white",
-            xaxis_title="Categoría",
-            yaxis_title="Unidades en Stock",
+            template=chart_template,
+            xaxis_title=get_string('chart_inventory_category', st.session_state.language),
+            yaxis_title=get_string('chart_inventory_stock', st.session_state.language),
             coloraxis_showscale=False
         )
         
@@ -397,72 +388,100 @@ def main():
     st.markdown("---")
     
     # Tabla de productos
-    st.markdown("### 📋 Catálogo de Productos")
+    st.markdown(f"### {get_string('products_catalog', st.session_state.language)}")
     
     # Opciones de ordenamiento
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.markdown(f"**Mostrando {len(filtered_df)} productos**")
+        st.markdown(f"**{get_string('products_table_showing', st.session_state.language, count=len(filtered_df))}**")
     
     with col2:
         sort_by = st.selectbox(
-            "Ordenar por:",
+            get_string('products_table_sort_by', st.session_state.language),
             ["name", "price", "inventory_count", "category"],
             format_func=lambda x: {
-                "name": "Nombre",
-                "price": "Precio", 
-                "inventory_count": "Inventario",
-                "category": "Categoría"
+                "name": get_string('products_table_sort_name', st.session_state.language),
+                "price": get_string('products_table_sort_price', st.session_state.language),
+                "inventory_count": get_string('products_table_sort_inventory', st.session_state.language),
+                "category": get_string('products_table_sort_category', st.session_state.language)
             }[x]
         )
     
     with col3:
-        sort_order = st.selectbox("Orden:", ["Ascendente", "Descendente"])
+        sort_options = [
+            get_string('products_table_sort_ascending', st.session_state.language),
+            get_string('products_table_sort_descending', st.session_state.language)
+        ]
+        sort_order = st.selectbox(
+            get_string('products_table_sort_order', st.session_state.language),
+            sort_options
+        )
     
     # Aplicar ordenamiento
-    ascending = sort_order == "Ascendente"
+    ascending = sort_order == get_string('products_table_sort_ascending', st.session_state.language)
     sorted_df = filtered_df.sort_values(sort_by, ascending=ascending)
     
     # Preparar datos para mostrar
     display_df = sorted_df.copy()
-    display_df['Producto'] = display_df['name']
-    display_df['Categoría'] = display_df['category'].str.title()
-    display_df['Precio'] = display_df['price'].apply(lambda x: f"${x:.2f}")
-    display_df['Inventario'] = display_df['inventory_count']
-    display_df['Estado'] = display_df['active'].apply(lambda x: "✅ Activo" if x else "❌ Inactivo")
+    display_df[get_string('products_table_product', st.session_state.language)] = display_df['name']
+    display_df[get_string('products_table_category', st.session_state.language)] = display_df['category'].str.title()
+    display_df[get_string('products_table_price', st.session_state.language)] = display_df['price'].apply(lambda x: f"${x:.2f}")
+    display_df[get_string('products_table_inventory', st.session_state.language)] = display_df['inventory_count']
+    display_df[get_string('products_table_status', st.session_state.language)] = display_df['active'].apply(
+        lambda x: get_string('products_table_status_active', st.session_state.language) if x else get_string('products_table_status_inactive', st.session_state.language)
+    )
     
     # Simular ventas
     import numpy as np
     np.random.seed(42)
-    display_df['Ventas'] = np.random.randint(0, 100, len(display_df))
+    display_df[get_string('products_table_sales', st.session_state.language)] = np.random.randint(0, 100, len(display_df))
     
     # Mostrar tabla
     st.dataframe(
-        display_df[['Producto', 'Categoría', 'Precio', 'Inventario', 'Ventas', 'Estado']],
+        display_df[[
+            get_string('products_table_product', st.session_state.language),
+            get_string('products_table_category', st.session_state.language),
+            get_string('products_table_price', st.session_state.language),
+            get_string('products_table_inventory', st.session_state.language),
+            get_string('products_table_sales', st.session_state.language),
+            get_string('products_table_status', st.session_state.language)
+        ]],
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Producto": st.column_config.TextColumn("Producto", width="large"),
-            "Categoría": st.column_config.TextColumn("Categoría", width="medium"),
-            "Precio": st.column_config.TextColumn("Precio", width="small"),
-            "Inventario": st.column_config.NumberColumn("Inventario", width="small"),
-            "Ventas": st.column_config.NumberColumn("Ventas", width="small"),
-            "Estado": st.column_config.TextColumn("Estado", width="medium")
+            get_string('products_table_product', st.session_state.language): st.column_config.TextColumn(
+                get_string('products_table_product', st.session_state.language), width="large"
+            ),
+            get_string('products_table_category', st.session_state.language): st.column_config.TextColumn(
+                get_string('products_table_category', st.session_state.language), width="medium"
+            ),
+            get_string('products_table_price', st.session_state.language): st.column_config.TextColumn(
+                get_string('products_table_price', st.session_state.language), width="small"
+            ),
+            get_string('products_table_inventory', st.session_state.language): st.column_config.NumberColumn(
+                get_string('products_table_inventory', st.session_state.language), width="small"
+            ),
+            get_string('products_table_sales', st.session_state.language): st.column_config.NumberColumn(
+                get_string('products_table_sales', st.session_state.language), width="small"
+            ),
+            get_string('products_table_status', st.session_state.language): st.column_config.TextColumn(
+                get_string('products_table_status', st.session_state.language), width="medium"
+            )
         }
     )
     
     # Información adicional
-    st.markdown("### ℹ️ Información Adicional")
+    st.markdown(f"### {get_string('products_info', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.info(f"""
-        **📊 Estadísticas de Filtrado:**
-        - Productos mostrados: {len(filtered_df)}
-        - Productos totales: {len(products_df)}
-        - Filtros aplicados: {4 - [selected_category, selected_status, search_term, price_range].count(None)}
+        **{get_string('products_info_statistics', st.session_state.language)}**
+        - {get_string('products_info_showing', st.session_state.language)}: {len(filtered_df)}
+        - {get_string('products_info_total', st.session_state.language)}: {len(products_df)}
+        - {get_string('products_info_filters_applied', st.session_state.language)}: {4 - [selected_category, selected_status, search_term, price_range].count(None)}
         """)
     
     with col2:
@@ -470,10 +489,10 @@ def main():
         most_common_category = categories_count.index[0] if len(categories_count) > 0 else "N/A"
         
         st.info(f"""
-        **🏷️ Análisis de Categorías:**
-        - Categoría más común: {most_common_category.title()}
-        - Categorías únicas: {filtered_df['category'].nunique()}
-        - Precio más alto: €{filtered_df['price'].max():.2f}
+        **{get_string('products_info_categories', st.session_state.language)}**
+        - {get_string('products_info_common_category', st.session_state.language)}: {most_common_category.title()}
+        - {get_string('products_info_unique_categories', st.session_state.language)}: {filtered_df['category'].nunique()}
+        - {get_string('products_info_highest_price', st.session_state.language)}: €{filtered_df['price'].max():.2f}
         """)
 
 if __name__ == "__main__":
