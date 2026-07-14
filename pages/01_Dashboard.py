@@ -1,23 +1,17 @@
 """
-Página principal del Dashboard
-Redirige al dashboard principal en app.py
+Página del Dashboard (redireccionamiento)
+Esta página redirige automáticamente a app.py (página principal)
 """
 
 import streamlit as st
+from sidebar import sidebar_navigation
 
-st.markdown("# 🏠 Dashboard Principal")
-st.markdown("Esta página redirige automáticamente al dashboard principal.")
-st.markdown("Por favor, usa la navegación en la barra lateral para acceder a las diferentes secciones.")
+st.set_page_config(page_title="Dashboard", page_icon="🏠", layout="wide")
 
-# Información sobre la navegación
-st.info("""
-💡 **Tip:** Usa el menú de la barra lateral para navegar entre las diferentes secciones:
-- 🏠 Dashboard: Vista general con métricas principales
-- 📦 Productos: Análisis y gestión de productos  
-- 👥 Clientes: Gestión y análisis de clientes
-- 💬 Conversaciones: Análisis del chatbot
-- 🛒 Carritos Abandonados: Recuperación de ventas
-- 📦 Pedidos y Envíos: Gestión de órdenes
-- 📊 Reportes: Generación de informes
-- ⚙️ Configuración: Ajustes del sistema
-""")
+# Verificar autenticación
+if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+    st.switch_page("app.py")
+
+# Si está autenticado, mostrar sidebar y redirigir
+sidebar_navigation()
+st.switch_page("app.py")
