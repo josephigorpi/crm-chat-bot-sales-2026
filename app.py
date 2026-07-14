@@ -15,6 +15,8 @@ from utils.chart_utils import (
     create_sales_timeline, create_order_status_donut, 
     create_messages_by_hour, create_intent_distribution
 )
+from utils.theme import inject_theme_css, get_theme, init_theme_state, get_plotly_template
+from i18n.strings import get_string
 
 # Configuración de la página
 st.set_page_config(
@@ -24,115 +26,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizado para mejorar el diseño
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f2937;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin: 0.5rem 0;
-    }
-    
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .sidebar-logo {
-        text-align: center;
-        padding: 1rem 0;
-        border-bottom: 1px solid #e5e7eb;
-        margin-bottom: 1rem;
-    }
-    
-    .user-info {
-        background: #f3f4f6;
-        padding: 0.8rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        text-align: center;
-        color: #1f2937;
-    }
-    
-    .login-container {
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 2rem;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        color: #1f2937;
-    }
-    
-    .login-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .login-title {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #1f2937;
-        margin-bottom: 0.5rem;
-    }
-    
-    .login-subtitle {
-        color: #6b7280;
-        font-size: 1rem;
-    }
-    
-    .stButton > button {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    .welcome-message {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    
-    .table-container {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin: 1rem 0;
-        color: #1f2937;
-    }
-</style>
-""", unsafe_allow_html=True)
+# ✅ Inyectar CSS dinámico del tema
+inject_theme_css()
+
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
 
 from sidebar import sidebar_navigation
 
@@ -147,26 +47,36 @@ def init_session_state():
         st.session_state.remember_me = False
 
 def login_page():
-    """Página de login"""
+    """Página de login con soporte para i18n"""
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
     # Header del login
-    st.markdown("""
+    st.markdown(f"""
     <div class="login-header">
-        <div class="login-title">🤖 Chatbot Ventas</div>
-        <div class="login-subtitle">Dashboard de Administración</div>
+        <div class="login-title">{get_string('login_title', st.session_state.language)}</div>
+        <div class="login-subtitle">{get_string('login_subtitle', st.session_state.language)}</div>
     </div>
     """, unsafe_allow_html=True)
     
     # Formulario de login
     with st.form("login_form"):
-        email = st.text_input("📧 Email", placeholder="admin@chatbot.com")
-        password = st.text_input("🔒 Contraseña", type="password", placeholder="admin123")
-        remember_me = st.checkbox("🔄 Recordar sesión")
+        email = st.text_input(
+            get_string('login_email', st.session_state.language),
+            placeholder=get_string('login_email_placeholder', st.session_state.language)
+        )
+        password = st.text_input(
+            get_string('login_password', st.session_state.language),
+            type="password",
+            placeholder=get_string('login_password_placeholder', st.session_state.language)
+        )
+        remember_me = st.checkbox(get_string('login_remember_me', st.session_state.language))
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            login_button = st.form_submit_button("🚀 Iniciar Sesión")
+            login_button = st.form_submit_button(
+                get_string('login_button', st.session_state.language),
+                use_container_width=True
+            )
     
     # Validación de credenciales
     if login_button:
@@ -174,69 +84,71 @@ def login_page():
             st.session_state.authenticated = True
             st.session_state.username = "Administrador"
             st.session_state.remember_me = remember_me
-            st.success("✅ ¡Bienvenido! Redirigiendo al dashboard...")
+            st.success(get_string('login_success', st.session_state.language))
             st.rerun()
         else:
-            st.error("❌ Credenciales incorrectas. Usa: admin@chatbot.com / admin123")
+            st.error(get_string('login_error', st.session_state.language))
     
     # Información de credenciales de prueba
     st.markdown("---")
-    st.info("""
-    **Credenciales de prueba:**
-    - Email: admin@chatbot.com
-    - Contraseña: admin123
+    st.info(f"""
+    **{get_string('login_credentials_title', st.session_state.language)}**
+    - {get_string('login_credentials_email', st.session_state.language)}
+    - {get_string('login_credentials_password', st.session_state.language)}
     """)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-
 def dashboard_page():
-    """Página principal del dashboard"""
-    st.markdown('<h1 class="main-header">📊 Dashboard Principal</h1>', unsafe_allow_html=True)
+    """Página principal del dashboard con soporte para i18n y temas dinámicos"""
+    st.markdown(f'<h1 class="main-header">{get_string("dashboard_title", st.session_state.language)}</h1>', unsafe_allow_html=True)
     
     # Mensaje de bienvenida
     st.markdown(f"""
     <div class="welcome-message">
-        <h3>¡Bienvenido, {st.session_state.username}! 👋</h3>
-        <p>Aquí tienes un resumen completo de tu negocio actualizado en tiempo real.</p>
+        <h3>{get_string('dashboard_welcome', st.session_state.language, username=st.session_state.username)}</h3>
+        <p>{get_string('dashboard_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Cargar datos
     try:
-        with st.spinner("Cargando datos del dashboard..."):
+        with st.spinner(get_string('dashboard_load_error', st.session_state.language)):
             data = get_all_data()
             metrics = get_calculated_metrics()
         
+        # Obtener template de gráficos según tema
+        chart_template = get_plotly_template()
+        
         # Métricas principales en cards
-        st.markdown("### 📈 Métricas Principales")
+        st.markdown(f"### {get_string('dashboard_metrics', st.session_state.language)}")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             st.metric(
-                label="💰 Total Ventas",
+                label=get_string('dashboard_total_sales', st.session_state.language),
                 value=f"€{metrics['total_sales']:,.2f}",
                 delta=f"+12.5%"
             )
         
         with col2:
             st.metric(
-                label="👥 Total Clientes", 
+                label=get_string('dashboard_total_customers', st.session_state.language),
                 value=f"{metrics['total_customers']:,}",
                 delta=f"+{len(data['customers'][pd.to_datetime(data['customers']['created_at']) >= datetime.now() - pd.Timedelta(days=30)])}"
             )
         
         with col3:
             st.metric(
-                label="📦 Total Pedidos",
+                label=get_string('dashboard_total_orders', st.session_state.language),
                 value=f"{metrics['total_orders']:,}",
-                delta=f"Promedio: {metrics['total_orders']/30:.1f}/día"
+                delta=f"{get_string('dashboard_analysis', st.session_state.language)}: {metrics['total_orders']/30:.1f}/día"
             )
         
         with col4:
             st.metric(
-                label="📊 Tasa Conversión",
+                label=get_string('dashboard_conversion_rate', st.session_state.language),
                 value=f"{metrics['conversion_rate']:.1f}%",
                 delta=f"+2.3%"
             )
@@ -244,18 +156,18 @@ def dashboard_page():
         st.markdown("---")
         
         # Gráficos principales
-        st.markdown("### 📊 Análisis Visual")
+        st.markdown(f"### {get_string('dashboard_analysis', st.session_state.language)}")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Gráfico de ventas en el tiempo
-            sales_chart = create_sales_timeline(data['orders'])
+            sales_chart = create_sales_timeline(data['orders'], chart_template)
             st.plotly_chart(sales_chart, use_container_width=True)
         
         with col2:
             # Gráfico de estados de pedidos
-            status_chart = create_order_status_donut(data['orders'])
+            status_chart = create_order_status_donut(data['orders'], chart_template)
             st.plotly_chart(status_chart, use_container_width=True)
         
         # Segunda fila de gráficos
@@ -263,18 +175,18 @@ def dashboard_page():
         
         with col1:
             # Mensajes por hora
-            messages_chart = create_messages_by_hour(data['conversations'])
+            messages_chart = create_messages_by_hour(data['conversations'], chart_template)
             st.plotly_chart(messages_chart, use_container_width=True)
         
         with col2:
             # Distribución de intenciones
-            intent_chart = create_intent_distribution(data['conversations'])
+            intent_chart = create_intent_distribution(data['conversations'], chart_template)
             st.plotly_chart(intent_chart, use_container_width=True)
         
         st.markdown("---")
         
         # Tabla de últimos pedidos
-        st.markdown("### 📋 Últimos 10 Pedidos")
+        st.markdown(f"### {get_string('dashboard_last_orders', st.session_state.language)}")
         
         recent_orders = data['orders'].merge(
             data['customers'][['id', 'first_name', 'last_name']], 
@@ -286,7 +198,16 @@ def dashboard_page():
         display_orders = recent_orders[['id', 'first_name', 'last_name', 'total_amount', 'status', 'created_at']].copy()
         display_orders['Cliente'] = display_orders['first_name'] + ' ' + display_orders['last_name']
         display_orders['Monto'] = display_orders['total_amount'].apply(lambda x: f"€{x:.2f}")
-        display_orders['Estado'] = display_orders['status'].str.title()
+        
+        # Traducir estado de órdenes
+        status_map = {
+            'pending': get_string('order_status_pending', st.session_state.language),
+            'processing': get_string('order_status_processing', st.session_state.language),
+            'shipped': get_string('order_status_shipped', st.session_state.language),
+            'delivered': get_string('order_status_delivered', st.session_state.language),
+            'cancelled': get_string('order_status_cancelled', st.session_state.language),
+        }
+        display_orders['Estado'] = display_orders['status'].map(status_map)
         display_orders['Fecha'] = pd.to_datetime(display_orders['created_at']).dt.strftime('%d/%m/%Y %H:%M')
         display_orders['ID'] = display_orders['id'].str[:8] + "..."
         
@@ -297,30 +218,30 @@ def dashboard_page():
         )
         
         # Información adicional
-        st.markdown("### ℹ️ Información del Sistema")
+        st.markdown(f"### {get_string('dashboard_system_info', st.session_state.language)}")
         col1, col2, col3 = st.columns(3)
         
         with col1:
             st.info(f"""
-            **🔄 Última actualización:**  
+            **{get_string('dashboard_last_update', st.session_state.language)}**  
             {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
             """)
         
         with col2:
             st.info(f"""
-            **📊 Datos cargados:**  
-            {len(data['customers'])} clientes, {len(data['products'])} productos
+            **{get_string('dashboard_data_loaded', st.session_state.language)}**  
+            {len(data['customers'])} {get_string('dashboard_customers_loaded', st.session_state.language)}, {len(data['products'])} {get_string('dashboard_products_loaded', st.session_state.language)}
             """)
         
         with col3:
             st.info(f"""
-            **💬 Conversaciones:**  
-            {len(data['conversations'])} mensajes procesados
+            **{get_string('dashboard_conversations', st.session_state.language)}**  
+            {len(data['conversations'])} {get_string('dashboard_messages_processed', st.session_state.language)}
             """)
     
     except Exception as e:
-        st.error(f"Error al cargar los datos: {str(e)}")
-        st.info("Verifica que todos los archivos de utilidades estén correctamente configurados.")
+        st.error(f"{get_string('dashboard_load_error', st.session_state.language)} {str(e)}")
+        st.info(get_string('dashboard_load_error_info', st.session_state.language))
 
 def main():
     """Función principal de la aplicación"""
