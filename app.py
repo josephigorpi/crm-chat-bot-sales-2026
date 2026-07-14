@@ -359,19 +359,27 @@ def dashboard_page():
         st.error(f"Error al cargar los datos: {str(e)}")
         st.info("Verifica que todos los archivos de utilidades estén correctamente configurados.")
 
-def main():
-    """Función principal de la aplicación"""
-    init_session_state()
+#def main():
+"""Función principal de la aplicación"""
+init_session_state()
+
+# Verificar autenticación
+if not st.session_state.authenticated:
+    login_page()
+else:
+    # Mostrar navegación
+    sidebar_navigation()
     
-    # Verificar autenticación
-    if not st.session_state.authenticated:
-        login_page()
-    else:
-        # Mostrar navegación
-        sidebar_navigation()
-        
-        # Mostrar dashboard principal
+    # Mostrar dashboard principal
+    #dashboard_page()
+
+    # Obtener el nombre del script actual
+    import os
+    current_file = os.path.basename(__file__)
+    
+    # Si estamos en app.py (no en una página de pages/)
+    if current_file == "app.py":
         dashboard_page()
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
