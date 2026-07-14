@@ -13,6 +13,23 @@ from utils.chart_utils import create_delivery_time_chart
 
 st.set_page_config(page_title="Pedidos y Envíos", page_icon="📦", layout="wide")
 
+
+# Importar el sidebar
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sidebar import sidebar_navigation
+
+
+# Verificar autenticación
+if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+    st.switch_page("app.py")
+
+# ✅ Mostrar el sidebar
+sidebar_navigation()
+
+
+
 # CSS personalizado
 st.markdown("""
 <style>
