@@ -11,6 +11,7 @@ from utils.data_generator import get_all_data
 from utils.chart_utils import create_top_products_chart, create_price_distribution, create_category_donut
 from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
 from i18n.strings import get_string
+from streamlit_extras.switch_page_button import switch_page
 
 import sys
 import os
@@ -30,7 +31,7 @@ if 'language' not in st.session_state:
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.switch_page("app.py")
+    switch_page("app")
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
