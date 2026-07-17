@@ -20,6 +20,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
+
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     switch_page("app")
@@ -27,7 +32,6 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 # ✅ Mostrar el sidebar
 sidebar_navigation()
 inject_theme_css()
-
 
 
 # CSS personalizado
@@ -269,21 +273,21 @@ def initialize_session_state():
 
 def save_settings():
     """Simula el guardado de configuraciones"""
-    st.success("✅ Configuraciones guardadas exitosamente!")
+    st.success(get_string('config_save_success', st.session_state.language))
     st.balloons()
 
 def reset_settings():
     """Resetea las configuraciones a valores por defecto"""
-    if st.button("🔄 Confirmar Reset", type="secondary"):
+    if st.button(get_string('config_reset_button', st.session_state.language), type="secondary"):
         initialize_session_state()
-        st.success("✅ Configuraciones restablecidas a valores por defecto!")
-        st.experimental_rerun()
+        st.success(get_string('config_reset_success', st.session_state.language))
+        st.rerun()
 
 def export_settings():
     """Exporta las configuraciones actuales"""
     settings_json = json.dumps(st.session_state.config_settings, indent=2, default=str)
     st.download_button(
-        label="📥 Descargar Configuraciones",
+        label=get_string('config_export_download', st.session_state.language),
         data=settings_json,
         file_name=f"configuraciones_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
         mime="application/json"
@@ -302,21 +306,21 @@ def main():
     """, unsafe_allow_html=True)
     
     # Perfil de usuario
-    st.markdown("### 👤 Perfil de Usuario")
+    st.markdown(f"### {get_string('config_user_profile', st.session_state.language)}")
     
-    st.markdown("""
+    st.markdown(f"""
     <div class="user-profile">
-        <div class="user-avatar">AD</div>
+        <div class="user-avatar">{get_string('config_user_avatar', st.session_state.language)}</div>
         <div>
-            <h4>Administrador Demo</h4>
-            <p>admin@salesbot.com • Último acceso: Hoy, 14:30</p>
-            <p><span class="status-indicator status-active"></span>Sesión activa</p>
+            <h4>{get_string('config_user_name', st.session_state.language)}</h4>
+            <p>{get_string('config_user_email', st.session_state.language)} • {get_string('config_user_last_access', st.session_state.language)}</p>
+            <p><span class="status-indicator status-active"></span>{get_string('config_user_active', st.session_state.language)}</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     # Estadísticas del sistema
-    st.markdown("### 📊 Estado del Sistema")
+    st.markdown(f"### {get_string('config_system_status', st.session_state.language)}")
     
     system_info = st.session_state.system_info
     
@@ -324,27 +328,27 @@ def main():
     <div class="system-stats">
         <div class="stat-card">
             <div class="stat-value">{system_info['version']}</div>
-            <div class="stat-label">Versión del Sistema</div>
+            <div class="stat-label">{get_string('config_system_version', st.session_state.language)}</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{system_info['uptime']}</div>
-            <div class="stat-label">Tiempo Activo</div>
+            <div class="stat-label">{get_string('config_system_uptime', st.session_state.language)}</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{system_info['active_sessions']}</div>
-            <div class="stat-label">Sesiones Activas</div>
+            <div class="stat-label">{get_string('config_system_active_sessions', st.session_state.language)}</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{system_info['database_size']}</div>
-            <div class="stat-label">Tamaño de BD</div>
+            <div class="stat-label">{get_string('config_system_db_size', st.session_state.language)}</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{system_info['api_calls_today']:,}</div>
-            <div class="stat-label">Llamadas API Hoy</div>
+            <div class="stat-label">{get_string('config_system_api_calls', st.session_state.language)}</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{system_info['errors_today']}</div>
-            <div class="stat-label">Errores Hoy</div>
+            <div class="stat-label">{get_string('config_system_errors', st.session_state.language)}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -356,9 +360,9 @@ def main():
     
     with col1:
         # Notificaciones
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">🔔 Configuración de Notificaciones</div>
+            <div class="setting-title">{get_string('config_notifications', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -378,40 +382,40 @@ def main():
         
         with col_a:
             notifications['email_alerts'] = st.checkbox(
-                "Alertas por Email",
+                get_string('config_notifications_email', st.session_state.language),
                 value=notifications['email_alerts'],
-                help="Recibir notificaciones importantes por email"
+                help=get_string('config_notifications_email_help', st.session_state.language)
             )
             
             notifications['daily_reports'] = st.checkbox(
-                "Reportes Diarios",
+                get_string('config_notifications_daily', st.session_state.language),
                 value=notifications['daily_reports'],
-                help="Recibir resumen diario de métricas"
+                help=get_string('config_notifications_daily_help', st.session_state.language)
             )
             
             notifications['low_stock_alerts'] = st.checkbox(
-                "Alertas de Stock Bajo",
+                get_string('config_notifications_stock', st.session_state.language),
                 value=notifications['low_stock_alerts'],
-                help="Notificar cuando el inventario esté bajo"
+                help=get_string('config_notifications_stock_help', st.session_state.language)
             )
         
         with col_b:
             notifications['push_notifications'] = st.checkbox(
-                "Notificaciones Push",
+                get_string('config_notifications_push', st.session_state.language),
                 value=notifications['push_notifications'],
-                help="Notificaciones en tiempo real en el navegador"
+                help=get_string('config_notifications_push_help', st.session_state.language)
             )
             
             notifications['new_customer_alerts'] = st.checkbox(
-                "Alertas de Nuevos Clientes",
+                get_string('config_notifications_customers', st.session_state.language),
                 value=notifications['new_customer_alerts'],
-                help="Notificar cuando se registre un nuevo cliente"
+                help=get_string('config_notifications_customers_help', st.session_state.language)
             )
         
         # Dashboard
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">📊 Configuración del Dashboard</div>
+            <div class="setting-title">{get_string('config_dashboard', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -421,14 +425,14 @@ def main():
         
         with col_a:
             dashboard['auto_refresh'] = st.checkbox(
-                "Actualización Automática",
+                get_string('config_dashboard_autorefresh', st.session_state.language),
                 value=dashboard['auto_refresh'],
-                help="Actualizar datos automáticamente"
+                help=get_string('config_dashboard_autorefresh_help', st.session_state.language)
             )
             
             if dashboard['auto_refresh']:
                 dashboard['refresh_interval'] = st.slider(
-                    "Intervalo de Actualización (segundos)",
+                    get_string('config_dashboard_refresh_interval', st.session_state.language),
                     min_value=10,
                     max_value=300,
                     value=dashboard['refresh_interval'],
@@ -436,29 +440,29 @@ def main():
                 )
             
             dashboard['default_date_range'] = st.selectbox(
-                "Rango de Fechas por Defecto",
+                get_string('config_dashboard_date_range', st.session_state.language),
                 options=[7, 30, 90, 365],
                 index=[7, 30, 90, 365].index(dashboard['default_date_range']),
-                format_func=lambda x: f"Últimos {x} días"
+                format_func=lambda x: get_string('config_dashboard_date_range_last', st.session_state.language, days=x)
             )
         
         with col_b:
             dashboard['show_animations'] = st.checkbox(
-                "Mostrar Animaciones",
+                get_string('config_dashboard_animations', st.session_state.language),
                 value=dashboard['show_animations'],
-                help="Habilitar animaciones en gráficos"
+                help=get_string('config_dashboard_animations_help', st.session_state.language)
             )
             
             dashboard['compact_mode'] = st.checkbox(
-                "Modo Compacto",
+                get_string('config_dashboard_compact', st.session_state.language),
                 value=dashboard['compact_mode'],
-                help="Mostrar más información en menos espacio"
+                help=get_string('config_dashboard_compact_help', st.session_state.language)
             )
         
         # Chatbot
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">🤖 Configuración del Chatbot</div>
+            <div class="setting-title">{get_string('config_chatbot', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -468,44 +472,44 @@ def main():
         
         with col_a:
             chatbot['auto_responses'] = st.checkbox(
-                "Respuestas Automáticas",
+                get_string('config_chatbot_auto', st.session_state.language),
                 value=chatbot['auto_responses'],
-                help="Habilitar respuestas automáticas del chatbot"
+                help=get_string('config_chatbot_auto_help', st.session_state.language)
             )
             
             chatbot['learning_mode'] = st.checkbox(
-                "Modo Aprendizaje",
+                get_string('config_chatbot_learning', st.session_state.language),
                 value=chatbot['learning_mode'],
-                help="Permitir que el chatbot aprenda de las conversaciones"
+                help=get_string('config_chatbot_learning_help', st.session_state.language)
             )
             
             chatbot['multilingual'] = st.checkbox(
-                "Soporte Multiidioma",
+                get_string('config_chatbot_multilingual', st.session_state.language),
                 value=chatbot['multilingual'],
-                help="Detectar y responder en múltiples idiomas"
+                help=get_string('config_chatbot_multilingual_help', st.session_state.language)
             )
         
         with col_b:
             chatbot['escalation_threshold'] = st.slider(
-                "Umbral de Escalación",
+                get_string('config_chatbot_escalation', st.session_state.language),
                 min_value=1,
                 max_value=10,
                 value=chatbot['escalation_threshold'],
-                help="Número de intentos antes de escalar a humano"
+                help=get_string('config_chatbot_escalation_help', st.session_state.language)
             )
             
             chatbot['response_delay'] = st.slider(
-                "Retraso de Respuesta (segundos)",
+                get_string('config_chatbot_delay', st.session_state.language),
                 min_value=0,
                 max_value=5,
                 value=chatbot['response_delay'],
-                help="Simular tiempo de pensamiento humano"
+                help=get_string('config_chatbot_delay_help', st.session_state.language)
             )
         
         # Recordatorios de carritos abandonados
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">🛒 Recordatorios de Carritos Abandonados</div>
+            <div class="setting-title">{get_string('config_cart_reminders', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -515,60 +519,59 @@ def main():
         
         with col_a:
             cart_reminders['enabled'] = st.checkbox(
-                "Habilitar Recordatorios Automáticos",
+                get_string('config_cart_reminders_enabled', st.session_state.language),
                 value=cart_reminders['enabled'],
-                help="Enviar recordatorios automáticos para carritos abandonados"
+                help=get_string('config_cart_reminders_enabled_help', st.session_state.language)
             )
             
             cart_reminders['test_mode'] = st.checkbox(
-                "Modo Prueba (10 segundos de espera)",
+                get_string('config_cart_reminders_test', st.session_state.language),
                 value=cart_reminders['test_mode'],
-                help="Modo de prueba con espera muy corta para comprobar el funcionamiento"
+                help=get_string('config_cart_reminders_test_help', st.session_state.language)
             )
         
         with col_b:
             if cart_reminders['test_mode']:
-                st.info(f"ℹ️ Modo Prueba activado: Espera de 10 segundos")
+                st.info(get_string('config_cart_reminders_test_info', st.session_state.language))
             else:
                 cart_reminders['delay_seconds'] = st.slider(
-                    "Tiempo de Espera para Recordatorio",
+                    get_string('config_cart_reminders_delay', st.session_state.language),
                     min_value=60,  # 1 minuto
                     max_value=86400,  # 24 horas
                     value=cart_reminders['delay_seconds'],
                     step=60,
-                    help="Tiempo que debe transcurrir desde el abandono para enviar el recordatorio"
+                    help=get_string('config_cart_reminders_delay_help', st.session_state.language)
                 )
                 # Convertir segundos a formato legible
                 hours = cart_reminders['delay_seconds'] // 3600
                 minutes = (cart_reminders['delay_seconds'] % 3600) // 60
-                st.markdown(f"**Tiempo configurado:** {hours}h {minutes}m")
+                st.markdown(get_string('config_cart_reminders_delay_display', st.session_state.language, hours=hours, minutes=minutes))
         
         cart_reminders['message_template'] = st.text_area(
-            "Plantilla de Mensaje",
+            get_string('config_cart_reminders_template', st.session_state.language),
             value=cart_reminders['message_template'],
-            help="Variables disponibles: {nombre}, {email}, {valor}, {productos}",
+            help=get_string('config_cart_reminders_template_help', st.session_state.language),
             height=100
         )
         
         # Log de recordatorios enviados
-        st.markdown("### 📋 Log de Recordatorios")
+        st.markdown(f"### {get_string('config_cart_reminders_log', st.session_state.language)}")
         if st.session_state.cart_reminders_log:
             for reminder in reversed(st.session_state.cart_reminders_log):
                 st.markdown(f"""
                 <div style="padding: 0.5rem; margin: 0.25rem 0; border-left: 4px solid #10b981; background: #f0fdf4;">
                     <strong>[{reminder['timestamp']}]</strong> 
                     <span style="color: #10b981; font-weight: bold;">ENVIADO</span><br>
-                    Cliente: {reminder['cliente']}<br>
-                    Valor: {reminder['valor']}
+                    {get_string('config_cart_reminders_log_entry', st.session_state.language, client=reminder['cliente'], value=reminder['valor'])}
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Aún no se han enviado recordatorios automáticos.")
+            st.info(get_string('config_cart_reminders_log_none', st.session_state.language))
         
         # Seguridad
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">🔒 Configuración de Seguridad</div>
+            <div class="setting-title">{get_string('config_security', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -578,19 +581,19 @@ def main():
         
         with col_a:
             security['two_factor_auth'] = st.checkbox(
-                "Autenticación de Dos Factores",
+                get_string('config_security_2fa', st.session_state.language),
                 value=security['two_factor_auth'],
-                help="Requerir 2FA para mayor seguridad"
+                help=get_string('config_security_2fa_help', st.session_state.language)
             )
             
             security['audit_logging'] = st.checkbox(
-                "Registro de Auditoría",
+                get_string('config_security_audit', st.session_state.language),
                 value=security['audit_logging'],
-                help="Registrar todas las acciones del usuario"
+                help=get_string('config_security_audit_help', st.session_state.language)
             )
             
             security['session_timeout'] = st.slider(
-                "Timeout de Sesión (minutos)",
+                get_string('config_security_timeout', st.session_state.language),
                 min_value=15,
                 max_value=480,
                 value=security['session_timeout'],
@@ -599,7 +602,7 @@ def main():
         
         with col_b:
             security['password_expiry'] = st.slider(
-                "Expiración de Contraseña (días)",
+                get_string('config_security_password_expiry', st.session_state.language),
                 min_value=30,
                 max_value=365,
                 value=security['password_expiry'],
@@ -607,16 +610,16 @@ def main():
             )
             
             security['login_attempts'] = st.slider(
-                "Intentos de Login Máximos",
+                get_string('config_security_login_attempts', st.session_state.language),
                 min_value=3,
                 max_value=10,
                 value=security['login_attempts']
             )
         
         # Datos y Backup
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-section">
-            <div class="setting-title">💾 Configuración de Datos y Backup</div>
+            <div class="setting-title">{get_string('config_data', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -626,25 +629,25 @@ def main():
         
         with col_a:
             data_config['auto_backup'] = st.checkbox(
-                "Backup Automático",
+                get_string('config_data_backup', st.session_state.language),
                 value=data_config['auto_backup'],
-                help="Realizar backups automáticos de los datos"
+                help=get_string('config_data_backup_help', st.session_state.language)
             )
             
             if data_config['auto_backup']:
                 data_config['backup_frequency'] = st.selectbox(
-                    "Frecuencia de Backup",
+                    get_string('config_data_backup_frequency', st.session_state.language),
                     options=['hourly', 'daily', 'weekly'],
                     index=['hourly', 'daily', 'weekly'].index(data_config['backup_frequency']),
                     format_func=lambda x: {
-                        'hourly': 'Cada hora',
-                        'daily': 'Diario',
-                        'weekly': 'Semanal'
+                        'hourly': get_string('config_data_backup_frequency_hourly', st.session_state.language),
+                        'daily': get_string('config_data_backup_frequency_daily', st.session_state.language),
+                        'weekly': get_string('config_data_backup_frequency_weekly', st.session_state.language)
                     }[x]
                 )
             
             data_config['data_retention'] = st.slider(
-                "Retención de Datos (días)",
+                get_string('config_data_retention', st.session_state.language),
                 min_value=30,
                 max_value=2555,  # ~7 años
                 value=data_config['data_retention'],
@@ -653,150 +656,167 @@ def main():
         
         with col_b:
             data_config['export_format'] = st.selectbox(
-                "Formato de Exportación",
+                get_string('config_data_export_format', st.session_state.language),
                 options=['CSV', 'Excel', 'JSON', 'PDF'],
                 index=['CSV', 'Excel', 'JSON', 'PDF'].index(data_config['export_format'])
             )
             
             data_config['anonymize_exports'] = st.checkbox(
-                "Anonimizar Exportaciones",
+                get_string('config_data_anonymize', st.session_state.language),
                 value=data_config['anonymize_exports'],
-                help="Remover información personal de las exportaciones"
+                help=get_string('config_data_anonymize_help', st.session_state.language)
             )
     
     with col2:
         # Panel de acciones rápidas
-        st.markdown("### ⚡ Acciones Rápidas")
+        st.markdown(f"### {get_string('config_quick_actions', st.session_state.language)}")
         
         # Guardar configuraciones
-        if st.button("💾 Guardar Configuraciones", type="primary", use_container_width=True):
+        if st.button(get_string('config_save', st.session_state.language), type="primary", use_container_width=True):
             save_settings()
         
         # Exportar configuraciones
-        st.markdown("**📤 Exportar/Importar:**")
+        st.markdown(f"**{get_string('config_export', st.session_state.language)}**")
         export_settings()
         
         uploaded_file = st.file_uploader(
-            "📥 Importar Configuraciones",
+            get_string('config_import', st.session_state.language),
             type=['json'],
-            help="Cargar configuraciones desde archivo JSON"
+            help=get_string('config_import_help', st.session_state.language)
         )
         
         if uploaded_file is not None:
             try:
                 imported_config = json.load(uploaded_file)
                 st.session_state.config_settings.update(imported_config)
-                st.success("✅ Configuraciones importadas!")
-                st.experimental_rerun()
+                st.success(get_string('config_import_success', st.session_state.language))
+                st.rerun()
             except Exception as e:
-                st.error(f"❌ Error al importar: {str(e)}")
+                st.error(get_string('config_import_error', st.session_state.language, error=str(e)))
         
         st.markdown("---")
         
         # Reset configuraciones
-        st.markdown("**🔄 Restablecer:**")
-        if st.button("⚠️ Reset a Valores por Defecto", use_container_width=True):
+        st.markdown(f"**{get_string('config_reset', st.session_state.language)}**")
+        if st.button(get_string('config_reset_button', st.session_state.language), use_container_width=True):
             reset_settings()
         
         st.markdown("---")
         
         # Información de backup
-        st.markdown("**💾 Información de Backup:**")
+        st.markdown(f"**{get_string('config_backup_info', st.session_state.language)}**")
         
         last_backup = system_info['last_backup']
+        hours_ago = (datetime.now() - last_backup).seconds // 3600
         st.markdown(f"""
         <div class="backup-info">
-            <strong>Último Backup:</strong><br>
+            <strong>{get_string('config_backup_last', st.session_state.language)}</strong><br>
             {last_backup.strftime('%d/%m/%Y %H:%M')}<br>
-            <small>Hace {(datetime.now() - last_backup).seconds // 3600} horas</small>
+            <small>{get_string('config_backup_hours_ago', st.session_state.language, hours=hours_ago)}</small>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🔄 Crear Backup Manual", use_container_width=True):
-            with st.spinner("Creando backup..."):
+        if st.button(get_string('config_backup_manual', st.session_state.language), use_container_width=True):
+            with st.spinner(get_string('config_backup_creating', st.session_state.language)):
                 import time
                 time.sleep(2)  # Simular proceso
-                st.success("✅ Backup creado exitosamente!")
+                st.success(get_string('config_backup_success', st.session_state.language))
         
         st.markdown("---")
         
         # Estado del sistema
-        st.markdown("**📊 Estado del Sistema:**")
+        st.markdown(f"**{get_string('config_system_status_details', st.session_state.language)}**")
         
         # Indicadores de estado
-        st.markdown("""
+        st.markdown(f"""
         <div class="config-item">
-            <div><span class="status-indicator status-active"></span>Base de Datos: Conectada</div>
-            <div><span class="status-indicator status-active"></span>API: Funcionando</div>
-            <div><span class="status-indicator status-warning"></span>Cache: 78% utilizado</div>
-            <div><span class="status-indicator status-active"></span>Backup: Actualizado</div>
+            <div><span class="status-indicator status-active"></span>{get_string('config_status_database', st.session_state.language)}</div>
+            <div><span class="status-indicator status-active"></span>{get_string('config_status_api', st.session_state.language)}</div>
+            <div><span class="status-indicator status-warning"></span>{get_string('config_status_cache', st.session_state.language, percent=78)}</div>
+            <div><span class="status-indicator status-active"></span>{get_string('config_status_backup', st.session_state.language)}</div>
         </div>
         """, unsafe_allow_html=True)
         
         # Mantenimiento
-        st.markdown("**🔧 Mantenimiento:**")
+        st.markdown(f"**{get_string('config_maintenance', st.session_state.language)}**")
         
-        if st.button("🧹 Limpiar Cache", use_container_width=True):
-            st.success("✅ Cache limpiado!")
+        if st.button(get_string('config_maintenance_cache', st.session_state.language), use_container_width=True):
+            st.success(get_string('config_maintenance_cache_success', st.session_state.language))
         
-        if st.button("🔄 Reiniciar Servicios", use_container_width=True):
-            st.warning("⚠️ Los servicios se reiniciarán en 30 segundos")
+        if st.button(get_string('config_maintenance_restart', st.session_state.language), use_container_width=True):
+            st.warning(get_string('config_maintenance_restart_warning', st.session_state.language))
         
-        if st.button("📊 Optimizar Base de Datos", use_container_width=True):
-            with st.spinner("Optimizando..."):
+        if st.button(get_string('config_maintenance_optimize', st.session_state.language), use_container_width=True):
+            with st.spinner(get_string('config_maintenance_optimizing', st.session_state.language)):
                 import time
                 time.sleep(3)
-                st.success("✅ Base de datos optimizada!")
+                st.success(get_string('config_maintenance_optimize_success', st.session_state.language))
     
     st.markdown("---")
     
     # Configuraciones avanzadas
-    with st.expander("🔧 Configuraciones Avanzadas"):
-        st.markdown("### ⚙️ Configuraciones Técnicas")
+    with st.expander(get_string('config_advanced', st.session_state.language)):
+        st.markdown(f"### {get_string('config_advanced_technical', st.session_state.language)}")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**🌐 API y Integraciones:**")
+            st.markdown(f"**{get_string('config_advanced_api', st.session_state.language)}**")
             
-            api_rate_limit = st.slider("Límite de Rate API (req/min)", 100, 10000, 1000, 100)
-            api_timeout = st.slider("Timeout API (segundos)", 5, 60, 30, 5)
+            api_rate_limit = st.slider(get_string('config_advanced_rate_limit', st.session_state.language), 100, 10000, 1000, 100)
+            api_timeout = st.slider(get_string('config_advanced_timeout', st.session_state.language), 5, 60, 30, 5)
             
-            enable_webhooks = st.checkbox("Habilitar Webhooks", value=True)
+            enable_webhooks = st.checkbox(get_string('config_advanced_webhooks', st.session_state.language), value=True)
             if enable_webhooks:
-                webhook_url = st.text_input("URL de Webhook", placeholder="https://api.ejemplo.com/webhook")
+                webhook_url = st.text_input(
+                    get_string('config_advanced_webhook_url', st.session_state.language),
+                    placeholder=get_string('config_advanced_webhook_placeholder', st.session_state.language)
+                )
             
-            st.markdown("**📧 Configuración de Email:**")
-            smtp_server = st.text_input("Servidor SMTP", value="smtp.gmail.com")
-            smtp_port = st.number_input("Puerto SMTP", value=587, min_value=1, max_value=65535)
-            smtp_user = st.text_input("Usuario SMTP", placeholder="usuario@ejemplo.com")
+            st.markdown(f"**{get_string('config_advanced_email', st.session_state.language)}**")
+            smtp_server = st.text_input(get_string('config_advanced_smtp_server', st.session_state.language), value="smtp.gmail.com")
+            smtp_port = st.number_input(get_string('config_advanced_smtp_port', st.session_state.language), value=587, min_value=1, max_value=65535)
+            smtp_user = st.text_input(
+                get_string('config_advanced_smtp_user', st.session_state.language),
+                placeholder=get_string('config_advanced_smtp_placeholder', st.session_state.language)
+            )
         
         with col2:
-            st.markdown("**🔍 Logging y Monitoreo:**")
+            st.markdown(f"**{get_string('config_advanced_logging', st.session_state.language)}**")
             
             log_level = st.selectbox(
-                "Nivel de Log",
+                get_string('config_advanced_log_level', st.session_state.language),
                 options=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                index=1
+                index=1,
+                format_func=lambda x: {
+                    'DEBUG': 'DEBUG',
+                    'INFO': get_string('config_logs_level_info', st.session_state.language),
+                    'WARNING': get_string('config_logs_level_warning', st.session_state.language),
+                    'ERROR': get_string('config_logs_level_error', st.session_state.language),
+                    'CRITICAL': get_string('config_logs_level_critical', st.session_state.language)
+                }[x]
             )
             
-            max_log_size = st.slider("Tamaño Máximo de Log (MB)", 10, 1000, 100, 10)
-            log_retention_days = st.slider("Retención de Logs (días)", 7, 365, 30, 7)
+            max_log_size = st.slider(get_string('config_advanced_max_log_size', st.session_state.language), 10, 1000, 100, 10)
+            log_retention_days = st.slider(get_string('config_advanced_log_retention', st.session_state.language), 7, 365, 30, 7)
             
-            enable_metrics = st.checkbox("Habilitar Métricas", value=True)
-            enable_alerts = st.checkbox("Habilitar Alertas", value=True)
+            enable_metrics = st.checkbox(get_string('config_advanced_metrics', st.session_state.language), value=True)
+            enable_alerts = st.checkbox(get_string('config_advanced_alerts', st.session_state.language), value=True)
             
-            st.markdown("**🎨 Personalización UI:**")
+            st.markdown(f"**{get_string('config_advanced_ui', st.session_state.language)}**")
             
-            theme_color = st.color_picker("Color Principal", value="#3b82f6")
-            custom_logo = st.file_uploader("Logo Personalizado", type=['png', 'jpg', 'svg'])
+            theme_color = st.color_picker(get_string('config_advanced_theme_color', st.session_state.language), value="#3b82f6")
+            custom_logo = st.file_uploader(
+                get_string('config_advanced_logo', st.session_state.language),
+                type=['png', 'jpg', 'svg']
+            )
             
             if custom_logo:
-                st.success("✅ Logo cargado (funcionalidad en desarrollo)")
+                st.success(get_string('config_advanced_logo_upload', st.session_state.language))
     
     # Logs del sistema
-    with st.expander("📋 Logs del Sistema"):
-        st.markdown("### 📊 Actividad Reciente")
+    with st.expander(get_string('config_logs', st.session_state.language)):
+        st.markdown(f"### {get_string('config_logs_recent', st.session_state.language)}")
         
         # Simular logs del sistema
         logs_data = [
@@ -814,15 +834,30 @@ def main():
         # Filtros para logs
         col1, col2, col3 = st.columns(3)
         
+        level_names = {
+            "Todos": get_string('config_logs_all', st.session_state.language),
+            "INFO": get_string('config_logs_level_info', st.session_state.language),
+            "WARNING": get_string('config_logs_level_warning', st.session_state.language),
+            "ERROR": get_string('config_logs_level_error', st.session_state.language),
+            "CRITICAL": get_string('config_logs_level_critical', st.session_state.language)
+        }
+        
         with col1:
-            level_filter = st.selectbox("Filtrar por Nivel:", ["Todos", "INFO", "WARNING", "ERROR", "CRITICAL"])
+            level_filter = st.selectbox(
+                get_string('config_logs_filter_level', st.session_state.language),
+                ["Todos", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                format_func=lambda x: level_names.get(x, x)
+            )
         
         with col2:
-            source_filter = st.selectbox("Filtrar por Fuente:", ["Todos", "AUTH", "BACKUP", "SYSTEM", "REPORTS", "API", "CRM", "CHATBOT"])
+            source_filter = st.selectbox(
+                get_string('config_logs_filter_source', st.session_state.language),
+                ["Todos", "AUTH", "BACKUP", "SYSTEM", "REPORTS", "API", "CRM", "CHATBOT"]
+            )
         
         with col3:
-            if st.button("🔄 Actualizar Logs"):
-                st.success("Logs actualizados!")
+            if st.button(get_string('config_logs_refresh', st.session_state.language)):
+                st.success(get_string('config_logs_refresh_success', st.session_state.language))
         
         # Aplicar filtros
         filtered_logs = logs_df.copy()
@@ -843,7 +878,7 @@ def main():
             st.markdown(f"""
             <div style="padding: 0.5rem; margin: 0.25rem 0; border-left: 4px solid {level_color}; background: #f8fafc;">
                 <strong>[{log['timestamp']}]</strong> 
-                <span style="color: {level_color}; font-weight: bold;">{log['level']}</span> 
+                <span style="color: {level_color}; font-weight: bold;">{level_names.get(log['level'], log['level'])}</span> 
                 <span style="color: #6b7280;">({log['source']})</span><br>
                 {log['message']}
             </div>
@@ -851,32 +886,32 @@ def main():
     
     # Información del sistema
     st.markdown("---")
-    st.markdown("### ℹ️ Información del Sistema")
+    st.markdown(f"### {get_string('config_system_info', st.session_state.language)}")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.info(f"""
-        **🖥️ Sistema:**
-        - Versión: {system_info['version']}
-        - Uptime: {system_info['uptime']}
-        - Usuarios totales: {system_info['total_users']}
+        **{get_string('config_system_info_system', st.session_state.language)}**
+        - {get_string('config_system_info_version', st.session_state.language, version=system_info['version'])}
+        - {get_string('config_system_info_uptime', st.session_state.language, uptime=system_info['uptime'])}
+        - {get_string('config_system_info_users', st.session_state.language, users=system_info['total_users'])}
         """)
     
     with col2:
         st.info(f"""
-        **💾 Base de Datos:**
-        - Tamaño: {system_info['database_size']}
-        - Último backup: Hace 6 horas
-        - Estado: Saludable ✅
+        **{get_string('config_system_info_database', st.session_state.language)}**
+        - {get_string('config_system_info_db_size', st.session_state.language, size=system_info['database_size'])}
+        - {get_string('config_system_info_backup', st.session_state.language)}
+        - {get_string('config_system_info_db_status', st.session_state.language)}
         """)
     
     with col3:
         st.info(f"""
-        **📊 Rendimiento:**
-        - API calls hoy: {system_info['api_calls_today']:,}
-        - Errores hoy: {system_info['errors_today']}
-        - Sesiones activas: {system_info['active_sessions']}
+        **{get_string('config_system_info_performance', st.session_state.language)}**
+        - {get_string('config_system_info_api_calls', st.session_state.language, calls=system_info['api_calls_today'])}
+        - {get_string('config_system_info_errors', st.session_state.language, errors=system_info['errors_today'])}
+        - {get_string('config_system_info_sessions', st.session_state.language, sessions=system_info['active_sessions'])}
         """)
 
 if __name__ == "__main__":
