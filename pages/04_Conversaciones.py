@@ -25,6 +25,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
@@ -103,7 +107,7 @@ def load_conversation_data():
         data = get_all_data()
         return data
     except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
+        st.error(f"{get_string('conversations_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def calculate_chatbot_metrics(conversations_df):
@@ -148,7 +152,7 @@ def create_satisfaction_gauge(satisfaction_score):
         mode = "gauge+number+delta",
         value = satisfaction_score,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': "Satisfacción Promedio"},
+        title = {'text': get_string('chart_satisfaction_gauge', st.session_state.language)},
         delta = {'reference': 4.0},
         gauge = {
             'axis': {'range': [None, 5]},
@@ -180,21 +184,21 @@ def create_response_time_chart(conversations_df):
         hourly_response,
         x='hour',
         y='avg_response_time',
-        title='Tiempo Promedio de Respuesta por Hora',
+        title=get_string('chart_response_time', st.session_state.language),
         markers=True
     )
     
     fig.update_traces(
         line_color='#8b5cf6',
         marker_color='#8b5cf6',
-        hovertemplate='<b>Hora: %{x}:00</b><br>Tiempo: %{y:.1f}s<extra></extra>'
+        hovertemplate='<b>' + get_string('chart_response_time_hover', st.session_state.language) + '</b><br>' + get_string('chart_response_time_value', st.session_state.language) + '<extra></extra>'
     )
     
     fig.update_layout(
         height=400,
         template="plotly_white",
-        xaxis_title="Hora del Día",
-        yaxis_title="Tiempo de Respuesta (segundos)",
+        xaxis_title=get_string('chart_response_time_hour', st.session_state.language),
+        yaxis_title=get_string('chart_response_time_seconds', st.session_state.language),
         xaxis=dict(tickmode='linear', tick0=0, dtick=2)
     )
     
@@ -218,20 +222,20 @@ def create_intent_success_rate(conversations_df):
         intent_success,
         x='intent',
         y='success_rate',
-        title='Tasa de Éxito por Tipo de Consulta',
+        title=get_string('chart_intent_success', st.session_state.language),
         color='success_rate',
         color_continuous_scale='RdYlGn'
     )
     
     fig.update_traces(
-        hovertemplate='<b>%{x}</b><br>Tasa de Éxito: %{y:.1f}%<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('chart_intent_success_hover', st.session_state.language) + '<extra></extra>'
     )
     
     fig.update_layout(
         height=400,
         template="plotly_white",
-        xaxis_title="Tipo de Consulta",
-        yaxis_title="Tasa de Éxito (%)",
+        xaxis_title=get_string('conversations_filter_intent', st.session_state.language),
+        yaxis_title=get_string('chart_intent_success_rate', st.session_state.language),
         coloraxis_showscale=False
     )
     
@@ -239,49 +243,53 @@ def create_intent_success_rate(conversations_df):
 
 def display_conversation_sample(conversations_df):
     """Muestra una muestra de conversaciones"""
-    st.markdown("### 💬 Muestra de Conversaciones Recientes")
+    st.markdown(f"### {get_string('conversations_sample', st.session_state.language)}")
     
     # Seleccionar conversaciones recientes
     recent_conversations = conversations_df.nlargest(5, 'start_time')
     
     for _, conv in recent_conversations.iterrows():
-        with st.expander(f"Conversación #{conv['id']} - {conv['intent'].title()} - {conv['start_time'].strftime('%d/%m/%Y %H:%M')}"):
+        with st.expander(
+            get_string('conversations_sample_id', st.session_state.language, id=conv['id']) + 
+            f" - {conv['intent'].title()} - {conv['start_time'].strftime('%d/%m/%Y %H:%M')}"
+        ):
             col1, col2 = st.columns([2, 1])
             
             with col1:
                 # Simular mensajes de la conversación
                 st.markdown(f"""
                 <div class="user-bubble">
-                    <strong>👤 Cliente:</strong> Hola, tengo una consulta sobre {conv['intent']}
+                    <strong>{get_string('conversations_sample_user', st.session_state.language)}</strong> {get_string('conversations_sample_hello', st.session_state.language, intent=conv['intent'])}
                 </div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown(f"""
                 <div class="bot-bubble">
-                    <strong>🤖 Chatbot:</strong> ¡Hola! Estaré encantado de ayudarte con tu consulta sobre {conv['intent']}. ¿Podrías darme más detalles?
+                    <strong>{get_string('conversations_sample_bot', st.session_state.language)}</strong> {get_string('conversations_sample_help', st.session_state.language, intent=conv['intent'])}
                 </div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown(f"""
                 <div class="user-bubble">
-                    <strong>👤 Cliente:</strong> Necesito información específica sobre este tema.
+                    <strong>{get_string('conversations_sample_user', st.session_state.language)}</strong> {get_string('conversations_sample_info', st.session_state.language)}
                 </div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown(f"""
                 <div class="bot-bubble">
-                    <strong>🤖 Chatbot:</strong> Perfecto, aquí tienes la información que necesitas...
+                    <strong>{get_string('conversations_sample_bot', st.session_state.language)}</strong> {get_string('conversations_sample_response', st.session_state.language)}
                 </div>
                 """, unsafe_allow_html=True)
             
             with col2:
+                status_text = get_string('conversations_sample_resolved', st.session_state.language) if conv['resolved'] else get_string('conversations_sample_unresolved', st.session_state.language)
                 st.markdown(f"""
                 <div class="conversation-stats">
-                    <strong>📊 Estadísticas:</strong><br>
-                    • Mensajes: {int(conv['message_count'])}<br>
-                    • Duración: {int(conv['avg_response_time']//60)}m {int(conv['avg_response_time']%60)}s<br>
-                    • Satisfacción: {conv['satisfaction_score']:.1f}/5<br>
-                    • Estado: {'✅ Resuelto' if conv['resolved'] else '❌ No resuelto'}
+                    <strong>{get_string('conversations_sample_stats', st.session_state.language)}</strong><br>
+                    • {get_string('conversations_sample_messages', st.session_state.language)} {int(conv['message_count'])}<br>
+                    • {get_string('conversations_sample_duration', st.session_state.language)} {int(conv['avg_response_time']//60)}m {int(conv['avg_response_time']%60)}s<br>
+                    • {get_string('conversations_sample_satisfaction', st.session_state.language)} {conv['satisfaction_score']:.1f}/5<br>
+                    • {get_string('conversations_sample_status', st.session_state.language)} {status_text}
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -307,21 +315,31 @@ def main():
     metrics, enriched_conversations = calculate_chatbot_metrics(conversations_df)
     
     # Filtros
-    st.markdown("### 🔍 Filtros de Conversaciones")
+    st.markdown(f"### {get_string('conversations_filters', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        intents = ['Todos'] + list(enriched_conversations['intent'].unique())
-        selected_intent = st.selectbox("Tipo de Consulta", intents)
+        intents = [get_string('conversations_filter_intent_all', st.session_state.language)] + list(enriched_conversations['intent'].unique())
+        selected_intent = st.selectbox(
+            get_string('conversations_filter_intent', st.session_state.language),
+            intents
+        )
     
     with col2:
-        status_options = ['Todos', 'Resueltos', 'No Resueltos']
-        selected_status = st.selectbox("Estado", status_options)
+        status_options = [
+            get_string('conversations_filter_status_all', st.session_state.language),
+            get_string('conversations_filter_status_resolved', st.session_state.language),
+            get_string('conversations_filter_status_unresolved', st.session_state.language)
+        ]
+        selected_status = st.selectbox(
+            get_string('conversations_filter_status', st.session_state.language),
+            status_options
+        )
     
     with col3:
         date_range = st.date_input(
-            "Rango de Fechas",
+            get_string('conversations_filter_date', st.session_state.language),
             value=(
                 enriched_conversations['start_time'].min().date(),
                 enriched_conversations['start_time'].max().date()
@@ -331,17 +349,20 @@ def main():
         )
     
     with col4:
-        min_satisfaction = st.slider("Satisfacción Mínima", 1.0, 5.0, 1.0, 0.1)
+        min_satisfaction = st.slider(
+            get_string('conversations_filter_satisfaction', st.session_state.language),
+            1.0, 5.0, 1.0, 0.1
+        )
     
     # Aplicar filtros
     filtered_conversations = enriched_conversations.copy()
     
-    if selected_intent != 'Todos':
+    if selected_intent != get_string('conversations_filter_intent_all', st.session_state.language):
         filtered_conversations = filtered_conversations[filtered_conversations['intent'] == selected_intent]
     
-    if selected_status == 'Resueltos':
+    if selected_status == get_string('conversations_filter_status_resolved', st.session_state.language):
         filtered_conversations = filtered_conversations[filtered_conversations['resolved'] == True]
-    elif selected_status == 'No Resueltos':
+    elif selected_status == get_string('conversations_filter_status_unresolved', st.session_state.language):
         filtered_conversations = filtered_conversations[filtered_conversations['resolved'] == False]
     
     if len(date_range) == 2:
@@ -356,61 +377,64 @@ def main():
     ]
     
     # Métricas principales
-    st.markdown("### 📊 Métricas del Chatbot")
+    st.markdown(f"### {get_string('conversations_metrics', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:,}</h3>
-            <p>Conversaciones Totales</p>
+            <h3>{len(filtered_conversations):,}</h3>
+            <p>{get_string('conversations_metric_total', st.session_state.language)}</p>
         </div>
-        """.format(len(filtered_conversations)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
         resolved_count = len(filtered_conversations[filtered_conversations['resolved'] == True])
         resolution_rate = (resolved_count / len(filtered_conversations)) * 100 if len(filtered_conversations) > 0 else 0
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:.1f}%</h3>
-            <p>Tasa de Resolución</p>
+            <h3>{resolution_rate:.1f}%</h3>
+            <p>{get_string('conversations_metric_resolution', st.session_state.language)}</p>
         </div>
-        """.format(resolution_rate), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         avg_satisfaction = filtered_conversations['satisfaction_score'].mean() if len(filtered_conversations) > 0 else 0
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:.1f}/5</h3>
-            <p>Satisfacción Promedio</p>
+            <h3>{avg_satisfaction:.1f}/5</h3>
+            <p>{get_string('conversations_metric_satisfaction', st.session_state.language)}</p>
         </div>
-        """.format(avg_satisfaction), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
         avg_response = filtered_conversations['avg_response_time'].mean() if len(filtered_conversations) > 0 else 0
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:.0f}s</h3>
-            <p>Tiempo Respuesta</p>
+            <h3>{avg_response:.0f}s</h3>
+            <p>{get_string('conversations_metric_response', st.session_state.language)}</p>
         </div>
-        """.format(avg_response), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Visualizaciones principales
-    st.markdown("### 📈 Análisis de Conversaciones")
+    st.markdown(f"### {get_string('conversations_analysis', st.session_state.language)}")
+    
+    # Obtener el template de plotly
+    chart_template = get_plotly_template()
     
     col1, col2 = st.columns(2)
     
     with col1:
         # Mensajes por hora
-        messages_chart = create_messages_by_hour(filtered_conversations)
+        messages_chart = create_messages_by_hour(filtered_conversations, chart_template, st.session_state.language)
         st.plotly_chart(messages_chart, use_container_width=True)
     
     with col2:
         # Distribución de intenciones
-        intent_chart = create_intent_distribution(filtered_conversations)
+        intent_chart = create_intent_distribution(filtered_conversations, chart_template, st.session_state.language)
         st.plotly_chart(intent_chart, use_container_width=True)
     
     col1, col2 = st.columns(2)
@@ -435,13 +459,13 @@ def main():
     
     with col2:
         # Mapa de calor de conversaciones
-        conversation_heatmap = create_conversation_heatmap(filtered_conversations)
+        conversation_heatmap = create_conversation_heatmap(filtered_conversations, chart_template, st.session_state.language)
         st.plotly_chart(conversation_heatmap, use_container_width=True)
     
     st.markdown("---")
     
     # Análisis de tendencias
-    st.markdown("### 📊 Tendencias Temporales")
+    st.markdown(f"### {get_string('conversations_trends', st.session_state.language)}")
     
     # Conversaciones por día
     daily_conversations = filtered_conversations.groupby(
@@ -461,7 +485,7 @@ def main():
         x=daily_conversations['date'],
         y=daily_conversations['total_conversations'],
         mode='lines+markers',
-        name='Conversaciones Totales',
+        name=get_string('conversations_trends_total', st.session_state.language),
         line=dict(color='#3b82f6'),
         yaxis='y'
     ))
@@ -470,16 +494,16 @@ def main():
         x=daily_conversations['date'],
         y=daily_conversations['resolution_rate'],
         mode='lines+markers',
-        name='Tasa de Resolución (%)',
+        name=get_string('conversations_trends_resolution', st.session_state.language),
         line=dict(color='#10b981'),
         yaxis='y2'
     ))
     
     fig.update_layout(
-        title='Tendencia de Conversaciones y Tasa de Resolución',
-        xaxis_title='Fecha',
-        yaxis=dict(title='Número de Conversaciones', side='left'),
-        yaxis2=dict(title='Tasa de Resolución (%)', side='right', overlaying='y'),
+        title=get_string('conversations_trends_title', st.session_state.language),
+        xaxis_title=get_string('conversations_trends_date', st.session_state.language),
+        yaxis=dict(title=get_string('conversations_trends_total', st.session_state.language), side='left'),
+        yaxis2=dict(title=get_string('conversations_trends_resolution', st.session_state.language), side='right', overlaying='y'),
         template='plotly_white',
         height=400,
         hovermode='x unified'
@@ -495,12 +519,12 @@ def main():
     st.markdown("---")
     
     # Chatbot interactivo con flujo de pago
-    st.markdown("### 🤖 Chatbot Interactivo (Demo Pago)")
+    st.markdown(f"### {get_string('conversations_chatbot', st.session_state.language)}")
     
     # Inicializar estado del chat
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = [
-            {"role": "bot", "text": "¡Hola! Soy tu asistente de ventas. ¿En qué puedo ayudarte? Si quieres simular un pago, escribe 'quiero pagar'."}
+            {"role": "bot", "text": get_string('conversations_chatbot_welcome', st.session_state.language)}
         ]
     if "payment_step" not in st.session_state:
         st.session_state.payment_step = 0  # 0: inicio, 1: seleccionar método, 2: mostrar QR/confirmar
@@ -518,7 +542,7 @@ def main():
         
         # Botón TTS para mensajes del bot
         if msg["role"] == "bot":
-            if st.button(f"🔊 Escuchar", key=f"tts_{msg['text'][:20]}"):
+            if st.button(get_string('conversations_chatbot_listen', st.session_state.language), key=f"tts_{msg['text'][:20]}"):
                 tts = gTTS(text=msg["text"], lang='es')
                 audio_bytes = BytesIO()
                 tts.write_to_fp(audio_bytes)
@@ -526,7 +550,7 @@ def main():
                 st.audio(audio_bytes, format='audio/mp3')
     
     # Input del usuario
-    user_input = st.chat_input("Escribe tu mensaje...")
+    user_input = st.chat_input(get_string('conversations_chatbot_input', st.session_state.language))
     
     if user_input:
         # Agregar mensaje del usuario
@@ -536,27 +560,27 @@ def main():
         bot_response = ""
         if st.session_state.payment_step == 0:
             if "pagar" in user_input.lower() or "compra" in user_input.lower() or "carrito" in user_input.lower():
-                bot_response = "¡Perfecto! Vamos a procesar tu pago. ¿Qué método de pago prefieres?\n1. Yape/Plin\n2. Tarjeta\n3. Contraentrega"
+                bot_response = get_string('conversations_chatbot_payment', st.session_state.language)
                 st.session_state.payment_step = 1
             else:
-                bot_response = "¡Claro! Estoy aquí para ayudarte. Si quieres probar el flujo de pago, escribe 'quiero pagar'."
+                bot_response = get_string('conversations_chatbot_help', st.session_state.language)
         elif st.session_state.payment_step == 1:
             if "1" in user_input or "yape" in user_input.lower() or "plin" in user_input.lower():
                 st.session_state.selected_payment = "Yape/Plin"
-                bot_response = f"Has seleccionado {st.session_state.selected_payment}. Aquí tienes tu QR de pago simulado:"
+                bot_response = get_string('conversations_chatbot_yape', st.session_state.language, method=st.session_state.selected_payment)
                 st.session_state.payment_step = 2
             elif "2" in user_input or "tarjeta" in user_input.lower():
                 st.session_state.selected_payment = "Tarjeta"
-                bot_response = f"Has seleccionado {st.session_state.selected_payment}. ¡Pago simulado confirmado! Tu pedido ha sido registrado con estado de pago: Pago confirmado."
+                bot_response = get_string('conversations_chatbot_card', st.session_state.language, method=st.session_state.selected_payment)
                 st.session_state.payment_step = 0
             elif "3" in user_input or "contraentrega" in user_input.lower():
                 st.session_state.selected_payment = "Contraentrega"
-                bot_response = f"Has seleccionado {st.session_state.selected_payment}. ¡Pedido registrado! Recuerda que pagas al recibir. Estado de pago: Pago pendiente."
+                bot_response = get_string('conversations_chatbot_cash', st.session_state.language, method=st.session_state.selected_payment)
                 st.session_state.payment_step = 0
             else:
-                bot_response = "Por favor selecciona una opción válida:\n1. Yape/Plin\n2. Tarjeta\n3. Contraentrega"
+                bot_response = get_string('conversations_chatbot_payment_select', st.session_state.language)
         elif st.session_state.payment_step == 2:
-            bot_response = "¡Pago simulado confirmado! Tu pedido ha sido registrado. ¿Hay algo más en que pueda ayudarte?"
+            bot_response = get_string('conversations_chatbot_confirmed', st.session_state.language)
             st.session_state.payment_step = 0
         
         # Agregar respuesta del bot
@@ -578,49 +602,73 @@ def main():
         # Mostrar la imagen usando los bytes
         st.image(
             qr_img_bytes,
-            caption="QR de Pago Simulado (Yape/Plin)",
+            caption=get_string('conversations_chatbot_qr_caption', st.session_state.language),
             use_column_width=False,
             width=200
         )
     
-        if st.button("✅ Confirmar Pago Simulado"):
-            st.session_state.chat_messages.append({"role": "bot", "text": "¡Pago simulado confirmado! Tu pedido ha sido registrado. ¿Hay algo más en que pueda ayudarte?"})
+        if st.button(get_string('conversations_chatbot_confirm_button', st.session_state.language)):
+            st.session_state.chat_messages.append({"role": "bot", "text": get_string('conversations_chatbot_confirmed', st.session_state.language)})
             st.session_state.payment_step = 0
             st.rerun()
 
     st.markdown("---")
     
     # Tabla de conversaciones
-    st.markdown("### 📋 Lista de Conversaciones")
+    st.markdown(f"### {get_string('conversations_list', st.session_state.language)}")
     
     # Preparar datos para mostrar
     display_conversations = filtered_conversations.copy()
-    display_conversations['ID'] = display_conversations['id']
-    display_conversations['Fecha'] = display_conversations['start_time'].dt.strftime('%d/%m/%Y %H:%M')
-    display_conversations['Tipo'] = display_conversations['intent'].str.title()
-    display_conversations['Mensajes'] = display_conversations['message_count'].astype(int)
-    display_conversations['Satisfacción'] = display_conversations['satisfaction_score'].apply(lambda x: f"{x:.1f}/5")
-    display_conversations['Tiempo Respuesta'] = display_conversations['avg_response_time'].apply(lambda x: f"{x:.0f}s")
-    display_conversations['Estado'] = display_conversations['resolved'].apply(lambda x: "✅ Resuelto" if x else "❌ Pendiente")
+    display_conversations[get_string('conversations_list_id', st.session_state.language)] = display_conversations['id']
+    display_conversations[get_string('conversations_list_date', st.session_state.language)] = display_conversations['start_time'].dt.strftime('%d/%m/%Y %H:%M')
+    display_conversations[get_string('conversations_list_type', st.session_state.language)] = display_conversations['intent'].str.title()
+    display_conversations[get_string('conversations_list_messages', st.session_state.language)] = display_conversations['message_count'].astype(int)
+    display_conversations[get_string('conversations_list_satisfaction', st.session_state.language)] = display_conversations['satisfaction_score'].apply(lambda x: f"{x:.1f}/5")
+    display_conversations[get_string('conversations_list_response', st.session_state.language)] = display_conversations['avg_response_time'].apply(lambda x: f"{x:.0f}s")
+    display_conversations[get_string('conversations_list_status', st.session_state.language)] = display_conversations['resolved'].apply(
+        lambda x: get_string('conversations_list_resolved', st.session_state.language) if x else get_string('conversations_list_pending', st.session_state.language)
+    )
     
     # Mostrar tabla
     st.dataframe(
-        display_conversations[['ID', 'Fecha', 'Tipo', 'Mensajes', 'Satisfacción', 'Tiempo Respuesta', 'Estado']],
+        display_conversations[[
+            get_string('conversations_list_id', st.session_state.language),
+            get_string('conversations_list_date', st.session_state.language),
+            get_string('conversations_list_type', st.session_state.language),
+            get_string('conversations_list_messages', st.session_state.language),
+            get_string('conversations_list_satisfaction', st.session_state.language),
+            get_string('conversations_list_response', st.session_state.language),
+            get_string('conversations_list_status', st.session_state.language)
+        ]],
         use_container_width=True,
         hide_index=True,
         column_config={
-            "ID": st.column_config.TextColumn("ID", width="small"),
-            "Fecha": st.column_config.TextColumn("Fecha", width="medium"),
-            "Tipo": st.column_config.TextColumn("Tipo de Consulta", width="medium"),
-            "Mensajes": st.column_config.NumberColumn("Mensajes", width="small"),
-            "Satisfacción": st.column_config.TextColumn("Satisfacción", width="small"),
-            "Tiempo Respuesta": st.column_config.TextColumn("Tiempo Respuesta", width="small"),
-            "Estado": st.column_config.TextColumn("Estado", width="medium")
+            get_string('conversations_list_id', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_id', st.session_state.language), width="small"
+            ),
+            get_string('conversations_list_date', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_date', st.session_state.language), width="medium"
+            ),
+            get_string('conversations_list_type', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_type', st.session_state.language), width="medium"
+            ),
+            get_string('conversations_list_messages', st.session_state.language): st.column_config.NumberColumn(
+                get_string('conversations_list_messages', st.session_state.language), width="small"
+            ),
+            get_string('conversations_list_satisfaction', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_satisfaction', st.session_state.language), width="small"
+            ),
+            get_string('conversations_list_response', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_response', st.session_state.language), width="small"
+            ),
+            get_string('conversations_list_status', st.session_state.language): st.column_config.TextColumn(
+                get_string('conversations_list_status', st.session_state.language), width="medium"
+            )
         }
     )
     
     # Insights y recomendaciones
-    st.markdown("### 💡 Insights y Recomendaciones")
+    st.markdown(f"### {get_string('conversations_insights', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
@@ -640,15 +688,15 @@ def main():
         
         if len(problematic_intents) > 0:
             st.warning(f"""
-            **⚠️ Áreas de Mejora Identificadas:**
+            **{get_string('conversations_insights_improvement', st.session_state.language)}**
             
-            **Intenciones con baja resolución:**
+            **{get_string('conversations_insights_low_resolution', st.session_state.language)}**
             {chr(10).join([f"• {intent}: {row['resolution_rate']:.1%} resolución" for intent, row in problematic_intents.head(3).iterrows()])}
             
-            **Recomendación:** Revisar y mejorar las respuestas del chatbot para estas consultas.
+            **{get_string('conversations_insights_recommendation', st.session_state.language)}**
             """)
         else:
-            st.success("✅ **Excelente rendimiento:** Todas las intenciones tienen buenas tasas de resolución y satisfacción.")
+            st.success(f"**{get_string('conversations_insights_excellent', st.session_state.language)}**")
     
     with col2:
         # Estadísticas generales
@@ -656,14 +704,14 @@ def main():
             filtered_conversations['start_time'].dt.hour
         ).size().idxmax()
         
-        most_common_intent = filtered_conversations['intent'].value_counts().index[0]
+        most_common_intent = filtered_conversations['intent'].value_counts().index[0] if len(filtered_conversations) > 0 else "N/A"
         
         st.info(f"""
-        **📊 Estadísticas Clave:**
-        - Hora pico de conversaciones: {peak_hour}:00
-        - Consulta más frecuente: {most_common_intent.title()}
-        - Conversaciones filtradas: {len(filtered_conversations)}
-        - Promedio mensajes por conversación: {filtered_conversations['message_count'].mean():.1f}
+        **{get_string('conversations_insights_stats', st.session_state.language)}**
+        - {get_string('conversations_insights_peak_hour', st.session_state.language, hour=peak_hour)}
+        - {get_string('conversations_insights_common_intent', st.session_state.language, intent=most_common_intent.title())}
+        - {get_string('conversations_insights_filtered', st.session_state.language, count=len(filtered_conversations))}
+        - {get_string('conversations_insights_avg_messages', st.session_state.language, avg=filtered_conversations['message_count'].mean())}
         """)
 
 if __name__ == "__main__":
