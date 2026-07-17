@@ -13,6 +13,8 @@ from utils.chart_utils import create_messages_by_hour, create_intent_distributio
 import qrcode
 from io import BytesIO
 from gtts import gTTS
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Conversaciones", page_icon="💬", layout="wide")
 
@@ -29,6 +31,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 # CSS personalizado
 st.markdown("""
@@ -285,10 +288,10 @@ def display_conversation_sample(conversations_df):
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="conversation-header">
-        <h1>💬 Conversaciones y Chatbot</h1>
-        <p>Análisis de efectividad del chatbot y gestión de conversaciones con clientes</p>
+        <h1>{get_string('conversations_title', st.session_state.language)}</h1>
+        <p>{get_string('conversations_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
