@@ -17,6 +17,8 @@ from utils.pdf_generator import (
     generate_abandoned_carts_report,
     create_download_link
 )
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Reportes", page_icon="📊", layout="wide")
 
@@ -33,6 +35,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 
 # CSS personalizado
@@ -386,10 +389,10 @@ def generate_executive_summary(data, kpis):
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="reports-header">
-        <h1>📊 Centro de Reportes</h1>
-        <p>Análisis avanzados y generación de reportes ejecutivos en PDF</p>
+        <h1>{get_string('reports_title', st.session_state.language)}</h1>
+        <p>{get_string('reports_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
