@@ -12,7 +12,6 @@ from utils.data_generator import get_all_data
 from utils.chart_utils import create_customer_segments_chart, create_customer_conversion_funnel
 from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
 from i18n.strings import get_string
-from streamlit_extras.switch_page_button import switch_page
 
 st.set_page_config(page_title="Clientes", page_icon="👥", layout="wide")
 
@@ -24,7 +23,7 @@ from sidebar import sidebar_navigation
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    switch_page("app.py")
+    st.switch_page("app.py")
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
