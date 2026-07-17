@@ -22,6 +22,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
+
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     switch_page("app")
@@ -124,7 +129,7 @@ def load_customers_data():
         
         return updated_data
     except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
+        st.error(f"{get_string('customers_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def calculate_customer_metrics(customers_df, orders_df):
@@ -184,21 +189,30 @@ def calculate_customer_metrics(customers_df, orders_df):
             else:
                 enriched_customers['days_since_last_order'] = None
     
-    # Segmentación de clientes (use 'segmento' from data_generator if available)
+    # Segmentación de clientes
+    segment_map = {
+        'Nuevo': get_string('customers_segment_new', st.session_state.language),
+        'Regular': get_string('customers_segment_regular', st.session_state.language),
+        'Frecuente': get_string('customers_segment_frequent', st.session_state.language),
+        'VIP': get_string('customers_segment_vip', st.session_state.language),
+        'Inactivo': get_string('customers_segment_inactive', st.session_state.language),
+        'Sin Compras': get_string('customers_segment_no_purchases', st.session_state.language)
+    }
+    
     if 'segmento' in enriched_customers.columns:
-        enriched_customers['segment'] = enriched_customers['segmento']
+        enriched_customers['segment'] = enriched_customers['segmento'].map(segment_map).fillna(enriched_customers['segmento'])
     else:
         def segment_customer(row):
             if row['order_count'] == 0:
-                return 'Sin Compras'
+                return get_string('customers_segment_no_purchases', st.session_state.language)
             elif row['order_count'] >= 10 and row['total_spent'] >= 1000:
-                return 'VIP'
+                return get_string('customers_segment_vip', st.session_state.language)
             elif row['order_count'] >= 5 or row['total_spent'] >= 500:
-                return 'Frecuente'
+                return get_string('customers_segment_frequent', st.session_state.language)
             elif row['days_since_last_order'] and row['days_since_last_order'] > 90:
-                return 'Inactivo'
+                return get_string('customers_segment_inactive', st.session_state.language)
             else:
-                return 'Regular'
+                return get_string('customers_segment_regular', st.session_state.language)
         
         enriched_customers['segment'] = enriched_customers.apply(segment_customer, axis=1)
     
@@ -216,17 +230,17 @@ def create_customer_lifetime_value_chart(customers_df):
     fig = go.Figure()
     
     fig.add_trace(go.Bar(
-        name='Valor Promedio (€)',
+        name=get_string('chart_customer_avg_value', st.session_state.language),
         x=segment_stats.index,
         y=segment_stats['total_spent'],
         marker_color='#3b82f6',
-        hovertemplate='<b>%{x}</b><br>Valor Promedio: €%{y}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('chart_customer_avg_value_hover', st.session_state.language) + ': €%{y}<extra></extra>'
     ))
     
     fig.update_layout(
-        title='Valor Promedio por Segmento de Cliente',
-        xaxis_title='Segmento',
-        yaxis_title='Valor Promedio (€)',
+        title=get_string('chart_customer_lifetime_value', st.session_state.language),
+        xaxis_title=get_string('chart_customer_segment', st.session_state.language),
+        yaxis_title=get_string('chart_customer_avg_value_y', st.session_state.language),
         template='plotly_white',
         height=400
     )
@@ -238,7 +252,15 @@ def create_customer_activity_heatmap(customers_df):
     # Simular actividad por día de la semana y hora
     import numpy as np
     
-    days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    days = [
+        get_string('chart_day_monday', st.session_state.language),
+        get_string('chart_day_tuesday', st.session_state.language),
+        get_string('chart_day_wednesday', st.session_state.language),
+        get_string('chart_day_thursday', st.session_state.language),
+        get_string('chart_day_friday', st.session_state.language),
+        get_string('chart_day_saturday', st.session_state.language),
+        get_string('chart_day_sunday', st.session_state.language)
+    ]
     hours = list(range(24))
     
     # Generar datos simulados
@@ -248,7 +270,7 @@ def create_customer_activity_heatmap(customers_df):
     for day in days:
         for hour in hours:
             # Simular más actividad en horas laborales y fines de semana
-            if day in ['Sábado', 'Domingo']:
+            if day in [get_string('chart_day_saturday', st.session_state.language), get_string('chart_day_sunday', st.session_state.language)]:
                 base_activity = np.random.poisson(15)
             elif 9 <= hour <= 18:
                 base_activity = np.random.poisson(20)
@@ -273,13 +295,13 @@ def create_customer_activity_heatmap(customers_df):
         x=heatmap_data.columns,
         y=heatmap_data.index,
         colorscale='Blues',
-        hovertemplate='<b>%{y}</b><br>Hora: %{x}:00<br>Actividad: %{z}<extra></extra>'
+        hovertemplate='<b>%{y}</b><br>' + get_string('chart_heatmap_hour_hover', st.session_state.language) + ': %{x}:00<br>' + get_string('chart_heatmap_activity_hover', st.session_state.language) + ': %{z}<extra></extra>'
     ))
     
     fig.update_layout(
-        title='Mapa de Calor - Actividad de Clientes por Día y Hora',
-        xaxis_title='Hora del Día',
-        yaxis_title='Día de la Semana',
+        title=get_string('chart_customer_activity_heatmap', st.session_state.language),
+        xaxis_title=get_string('chart_heatmap_hour_x', st.session_state.language),
+        yaxis_title=get_string('chart_heatmap_day_y', st.session_state.language),
         template='plotly_white',
         height=400
     )
@@ -307,7 +329,7 @@ def main():
     enriched_customers = calculate_customer_metrics(customers_df, orders_df)
     
     # Filtros
-    st.markdown("### 🔍 Filtros de Clientes")
+    st.markdown(f"### {get_string('customers_filters', st.session_state.language)}")
     
     with st.container():
         st.markdown('<div class="filter-section">', unsafe_allow_html=True)
@@ -315,37 +337,46 @@ def main():
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            segments = ['Todos'] + list(enriched_customers['segment'].unique())
-            selected_segment = st.selectbox("Segmento", segments)
+            segments = [get_string('customers_filter_segment_all', st.session_state.language)] + list(enriched_customers['segment'].unique())
+            selected_segment = st.selectbox(
+                get_string('customers_filter_segment', st.session_state.language),
+                segments
+            )
         
         with col2:
-            countries = ['Todos'] + list(enriched_customers['country'].unique())
-            selected_country = st.selectbox("País", countries)
+            countries = [get_string('customers_filter_country_all', st.session_state.language)] + list(enriched_customers['country'].unique())
+            selected_country = st.selectbox(
+                get_string('customers_filter_country', st.session_state.language),
+                countries
+            )
         
         with col3:
             min_spent = float(enriched_customers['total_spent'].min())
             max_spent = float(enriched_customers['total_spent'].max())
             spent_range = st.slider(
-                "Gasto Total (€)", 
+                get_string('customers_filter_spent', st.session_state.language),
                 min_value=min_spent, 
                 max_value=max_spent, 
                 value=(min_spent, max_spent)
             )
         
         with col4:
-            search_customer = st.text_input("🔍 Buscar cliente", placeholder="Nombre o email...")
+            search_customer = st.text_input(
+                get_string('customers_search', st.session_state.language),
+                placeholder=get_string('customers_search_placeholder', st.session_state.language)
+            )
         
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Sección para agregar nuevos clientes
-    st.markdown("### ➕ Agregar Nuevo Cliente")
+    st.markdown(f"### {get_string('customers_add_new', st.session_state.language)}")
     
-    with st.expander("🆕 Formulario para Agregar Cliente", expanded=True):
-        st.markdown("""
+    with st.expander(get_string('customers_add_form_title', st.session_state.language), expanded=True):
+        st.markdown(f"""
         <div class="add-customer-form">
             <div class="customer-form-header">
-                <h3>👥 Nuevo Cliente</h3>
-                <p>Complete la información del cliente</p>
+                <h3>{get_string('customers_add_form_header', st.session_state.language)}</h3>
+                <p>{get_string('customers_add_form_subtitle', st.session_state.language)}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -354,37 +385,80 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                customer_name = st.text_input("Nombre Completo *", placeholder="Ej: Juan Pérez")
-                customer_email = st.text_input("Email *", placeholder="juan.perez@email.com")
-                customer_phone = st.text_input("Teléfono", placeholder="+1 234 567 8900")
+                customer_name = st.text_input(
+                    get_string('customers_add_name', st.session_state.language),
+                    placeholder=get_string('customers_add_name_placeholder', st.session_state.language)
+                )
+                customer_email = st.text_input(
+                    get_string('customers_add_email', st.session_state.language),
+                    placeholder=get_string('customers_add_email_placeholder', st.session_state.language)
+                )
+                customer_phone = st.text_input(
+                    get_string('customers_add_phone', st.session_state.language),
+                    placeholder=get_string('customers_add_phone_placeholder', st.session_state.language)
+                )
                 customer_country = st.selectbox(
-                    "País *", 
+                    get_string('customers_add_country', st.session_state.language),
                     options=['España', 'México', 'Argentina', 'Colombia', 'Chile', 'Perú', 'Venezuela', 'Ecuador', 'Uruguay', 'Bolivia']
                 )
             
             with col2:
-                customer_city = st.text_input("Ciudad", placeholder="Madrid")
-                customer_address = st.text_area("Dirección", placeholder="Calle Principal 123")
-                customer_age = st.number_input("Edad", min_value=18, max_value=100, value=30, step=1)
+                customer_city = st.text_input(
+                    get_string('customers_add_city', st.session_state.language),
+                    placeholder=get_string('customers_add_city_placeholder', st.session_state.language)
+                )
+                customer_address = st.text_area(
+                    get_string('customers_add_address', st.session_state.language),
+                    placeholder=get_string('customers_add_address_placeholder', st.session_state.language)
+                )
+                customer_age = st.number_input(
+                    get_string('customers_add_age', st.session_state.language),
+                    min_value=18, max_value=100, value=30, step=1
+                )
                 customer_segment = st.selectbox(
-                    "Segmento Inicial", 
-                    options=['Nuevo', 'Regular', 'Frecuente', 'VIP'],
+                    get_string('customers_add_segment', st.session_state.language),
+                    options=[
+                        get_string('customers_segment_new', st.session_state.language),
+                        get_string('customers_segment_regular', st.session_state.language),
+                        get_string('customers_segment_frequent', st.session_state.language),
+                        get_string('customers_segment_vip', st.session_state.language)
+                    ],
                     index=0
                 )
             
             # Información adicional
-            st.markdown("**📋 Información Adicional**")
+            st.markdown(f"**{get_string('customers_add_additional_info', st.session_state.language)}**")
             col3, col4 = st.columns(2)
             
             with col3:
-                customer_gender = st.selectbox("Género", options=['Masculino', 'Femenino', 'Otro', 'Prefiero no decir'])
-                customer_marketing = st.checkbox("Acepta marketing por email", value=True)
+                customer_gender = st.selectbox(
+                    get_string('customers_add_gender', st.session_state.language),
+                    options=[
+                        get_string('customers_add_gender_male', st.session_state.language),
+                        get_string('customers_add_gender_female', st.session_state.language),
+                        get_string('customers_add_gender_other', st.session_state.language),
+                        get_string('customers_add_gender_prefer_not', st.session_state.language)
+                    ]
+                )
+                customer_marketing = st.checkbox(
+                    get_string('customers_add_marketing', st.session_state.language),
+                    value=True
+                )
             
             with col4:
-                customer_newsletter = st.checkbox("Suscrito al newsletter", value=False)
-                customer_notes = st.text_area("Notas adicionales", placeholder="Información relevante del cliente...")
+                customer_newsletter = st.checkbox(
+                    get_string('customers_add_newsletter', st.session_state.language),
+                    value=False
+                )
+                customer_notes = st.text_area(
+                    get_string('customers_add_notes', st.session_state.language),
+                    placeholder=get_string('customers_add_notes_placeholder', st.session_state.language)
+                )
             
-            submitted = st.form_submit_button("✅ Agregar Cliente", use_container_width=True)
+            submitted = st.form_submit_button(
+                get_string('customers_add_button', st.session_state.language),
+                use_container_width=True
+            )
             
             if submitted:
                 if customer_name and customer_email and customer_country:
@@ -414,42 +488,42 @@ def main():
                         # Agregar a la lista de clientes agregados
                         st.session_state.added_customers.append(new_customer)
                         
-                        st.success(f"✅ Cliente '{customer_name}' agregado exitosamente!")
-                        st.info("💡 El cliente se ha agregado a la lista y será visible inmediatamente.")
+                        st.success(get_string('customers_add_success', st.session_state.language, name=customer_name))
+                        st.info(get_string('customers_add_info', st.session_state.language))
                         
                         # Mostrar resumen del cliente agregado
-                        st.markdown("**📋 Resumen del Cliente Agregado:**")
+                        st.markdown(f"**{get_string('customers_add_summary', st.session_state.language)}**")
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.write(f"**Nombre:** {customer_name}")
-                            st.write(f"**Email:** {customer_email}")
-                            st.write(f"**Teléfono:** {customer_phone if customer_phone else 'No proporcionado'}")
-                            st.write(f"**País:** {customer_country}")
-                            st.write(f"**Ciudad:** {customer_city if customer_city else 'No proporcionada'}")
+                            st.write(f"**{get_string('customers_add_name_label', st.session_state.language)}** {customer_name}")
+                            st.write(f"**{get_string('customers_add_email_label', st.session_state.language)}** {customer_email}")
+                            st.write(f"**{get_string('customers_add_phone_label', st.session_state.language)}** {customer_phone if customer_phone else get_string('customers_add_not_provided', st.session_state.language)}")
+                            st.write(f"**{get_string('customers_add_country_label', st.session_state.language)}** {customer_country}")
+                            st.write(f"**{get_string('customers_add_city_label', st.session_state.language)}** {customer_city if customer_city else get_string('customers_add_not_provided_city', st.session_state.language)}")
                         with col2:
-                            st.write(f"**Edad:** {customer_age} años")
-                            st.write(f"**Género:** {customer_gender}")
-                            st.write(f"**Segmento:** {customer_segment}")
-                            st.write(f"**Marketing:** {'Sí' if customer_marketing else 'No'}")
-                            st.write(f"**Newsletter:** {'Sí' if customer_newsletter else 'No'}")
+                            st.write(f"**{get_string('customers_add_age_label', st.session_state.language)}** {customer_age} {get_string('customers_add_years', st.session_state.language)}")
+                            st.write(f"**{get_string('customers_add_gender_label', st.session_state.language)}** {customer_gender}")
+                            st.write(f"**{get_string('customers_add_segment_label', st.session_state.language)}** {customer_segment}")
+                            st.write(f"**{get_string('customers_add_marketing_label', st.session_state.language)}** {get_string('customers_add_yes', st.session_state.language) if customer_marketing else get_string('customers_add_no', st.session_state.language)}")
+                            st.write(f"**{get_string('customers_add_newsletter_label', st.session_state.language)}** {get_string('customers_add_yes', st.session_state.language) if customer_newsletter else get_string('customers_add_no', st.session_state.language)}")
                         
                         if customer_notes:
-                            st.write(f"**Notas:** {customer_notes}")
+                            st.write(f"**{get_string('customers_add_notes_label', st.session_state.language)}** {customer_notes}")
                         
                         # Forzar rerun para actualizar la página
                         st.rerun()
                     else:
-                        st.error("❌ Por favor ingrese un email válido")
+                        st.error(get_string('customers_add_email_invalid', st.session_state.language))
                 else:
-                    st.error("❌ Por favor complete todos los campos obligatorios (*)")
+                    st.error(get_string('customers_add_error', st.session_state.language))
     
     # Aplicar filtros
     filtered_customers = enriched_customers.copy()
     
-    if selected_segment != 'Todos':
+    if selected_segment != get_string('customers_filter_segment_all', st.session_state.language):
         filtered_customers = filtered_customers[filtered_customers['segment'] == selected_segment]
     
-    if selected_country != 'Todos':
+    if selected_country != get_string('customers_filter_country_all', st.session_state.language):
         filtered_customers = filtered_customers[filtered_customers['country'] == selected_country]
     
     filtered_customers = filtered_customers[
@@ -465,49 +539,49 @@ def main():
         ]
     
     # Métricas principales
-    st.markdown("### 📊 Métricas de Clientes")
+    st.markdown(f"### {get_string('customers_metrics', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-highlight">
-            <h3>{:,}</h3>
-            <p>Total Clientes</p>
+            <h3>{len(filtered_customers):,}</h3>
+            <p>{get_string('customers_metric_total', st.session_state.language)}</p>
         </div>
-        """.format(len(filtered_customers)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
-        active_customers = len(filtered_customers[filtered_customers['segment'] != 'Sin Compras'])
-        st.markdown("""
+        active_customers = len(filtered_customers[filtered_customers['segment'] != get_string('customers_segment_no_purchases', st.session_state.language)])
+        st.markdown(f"""
         <div class="metric-highlight">
-            <h3>{:,}</h3>
-            <p>Clientes Activos</p>
+            <h3>{active_customers:,}</h3>
+            <p>{get_string('customers_metric_active', st.session_state.language)}</p>
         </div>
-        """.format(active_customers), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         avg_clv = filtered_customers['total_spent'].mean()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-highlight">
-            <h3>€{:.2f}</h3>
-            <p>CLV Promedio</p>
+            <h3>€{avg_clv:.2f}</h3>
+            <p>{get_string('customers_metric_avg_clv', st.session_state.language)}</p>
         </div>
-        """.format(avg_clv), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
-        vip_customers = len(filtered_customers[filtered_customers['segment'] == 'VIP'])
-        st.markdown("""
+        vip_customers = len(filtered_customers[filtered_customers['segment'] == get_string('customers_segment_vip', st.session_state.language)])
+        st.markdown(f"""
         <div class="metric-highlight">
-            <h3>{:,}</h3>
-            <p>Clientes VIP</p>
+            <h3>{vip_customers:,}</h3>
+            <p>{get_string('customers_metric_vip', st.session_state.language)}</p>
         </div>
-        """.format(vip_customers), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Segmentación de clientes
-    st.markdown("### 🎯 Segmentación de Clientes")
+    st.markdown(f"### {get_string('customers_segmentation', st.session_state.language)}")
     
     segment_stats = filtered_customers.groupby('segment').agg({
         'id': 'count',
@@ -526,29 +600,32 @@ def main():
             st.markdown(f"""
             <div class="segment-card">
                 <h4>{segment['segment']}</h4>
-                <p><strong>{int(segment['count'])}</strong> clientes</p>
+                <p><strong>{int(segment['count'])}</strong> {get_string('customers_segment_customers', st.session_state.language)}</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
-            **Métricas del Segmento:**
-            - 💰 Gasto promedio: €{segment['avg_spent']:.2f}
-            - 📈 Revenue total: €{segment['total_revenue']:.2f}
-            - 🛒 Pedidos promedio: {segment['avg_orders']:.1f}
-            - 💳 Valor promedio por pedido: €{segment['avg_order_value']:.2f}
+            **{get_string('customers_segment_metrics', st.session_state.language)}**
+            - {get_string('customers_segment_avg_spent', st.session_state.language)} €{segment['avg_spent']:.2f}
+            - {get_string('customers_segment_total_revenue', st.session_state.language)} €{segment['total_revenue']:.2f}
+            - {get_string('customers_segment_avg_orders', st.session_state.language)} {segment['avg_orders']:.1f}
+            - {get_string('customers_segment_avg_order_value', st.session_state.language)} €{segment['avg_order_value']:.2f}
             """)
     
     st.markdown("---")
     
     # Visualizaciones
-    st.markdown("### 📈 Análisis Visual")
+    st.markdown(f"### {get_string('customers_analysis', st.session_state.language)}")
+    
+    # Obtener el template de plotly
+    chart_template = get_plotly_template()
     
     col1, col2 = st.columns(2)
     
     with col1:
         # Segmentación de clientes
-        segmentation_chart = create_customer_segments_chart(filtered_customers, data['orders'])
+        segmentation_chart = create_customer_segments_chart(filtered_customers, data['orders'], chart_template, st.session_state.language)
         st.plotly_chart(segmentation_chart, use_container_width=True)
     
     with col2:
@@ -566,20 +643,20 @@ def main():
             x=country_dist.values,
             y=country_dist.index,
             orientation='h',
-            title='Top 10 Países por Número de Clientes',
+            title=get_string('customers_geographic', st.session_state.language),
             color=country_dist.values,
             color_continuous_scale='Viridis'
         )
         
         fig.update_traces(
-            hovertemplate='<b>%{y}</b><br>Clientes: %{x}<extra></extra>'
+            hovertemplate='<b>%{y}</b><br>' + get_string('customers_geographic_x', st.session_state.language) + ': %{x}<extra></extra>'
         )
         
         fig.update_layout(
             height=400,
-            template="plotly_white",
-            xaxis_title="Número de Clientes",
-            yaxis_title="País",
+            template=chart_template,
+            xaxis_title=get_string('customers_geographic_x', st.session_state.language),
+            yaxis_title=get_string('customers_geographic_y', st.session_state.language),
             coloraxis_showscale=False
         )
         
@@ -593,92 +670,112 @@ def main():
     st.markdown("---")
     
     # Embudo de conversión
-    st.markdown("### 🎯 Embudo de Conversión")
+    st.markdown(f"### {get_string('customers_conversion_funnel', st.session_state.language)}")
     
     conversion_data = {
-        'Visitantes': 10000,
-        'Registrados': len(enriched_customers),
-        'Primera Compra': len(enriched_customers[enriched_customers['order_count'] > 0]),
-        'Clientes Recurrentes': len(enriched_customers[enriched_customers['order_count'] > 1]),
-        'Clientes VIP': len(enriched_customers[enriched_customers['segment'] == 'VIP'])
+        get_string('customers_conversion_visitors', st.session_state.language): 10000,
+        get_string('customers_conversion_registered', st.session_state.language): len(enriched_customers),
+        get_string('customers_conversion_first_purchase', st.session_state.language): len(enriched_customers[enriched_customers['order_count'] > 0]),
+        get_string('customers_conversion_recurring', st.session_state.language): len(enriched_customers[enriched_customers['order_count'] > 1]),
+        get_string('customers_conversion_vip', st.session_state.language): len(enriched_customers[enriched_customers['segment'] == get_string('customers_segment_vip', st.session_state.language)])
     }
     
-    conversion_chart = create_customer_conversion_funnel(conversion_data)
+    conversion_chart = create_customer_conversion_funnel(conversion_data, chart_template)
     st.plotly_chart(conversion_chart, use_container_width=True)
     
     # Mostrar tasas de conversión
     col1, col2, col3 = st.columns(3)
     
+    visitors = conversion_data[get_string('customers_conversion_visitors', st.session_state.language)]
+    registered = conversion_data[get_string('customers_conversion_registered', st.session_state.language)]
+    first_purchase = conversion_data[get_string('customers_conversion_first_purchase', st.session_state.language)]
+    recurring = conversion_data[get_string('customers_conversion_recurring', st.session_state.language)]
+    
     with col1:
-        reg_rate = (conversion_data['Registrados'] / conversion_data['Visitantes']) * 100 if conversion_data['Visitantes'] > 0 else 0
-        st.metric("Tasa de Registro", f"{reg_rate:.1f}%")
+        reg_rate = (registered / visitors) * 100 if visitors > 0 else 0
+        st.metric(get_string('customers_conversion_registration_rate', st.session_state.language), f"{reg_rate:.1f}%")
     
     with col2:
-        purchase_rate = (conversion_data['Primera Compra'] / conversion_data['Registrados']) * 100 if conversion_data['Registrados'] > 0 else 0
-        st.metric("Tasa de Primera Compra", f"{purchase_rate:.1f}%")
+        purchase_rate = (first_purchase / registered) * 100 if registered > 0 else 0
+        st.metric(get_string('customers_conversion_purchase_rate', st.session_state.language), f"{purchase_rate:.1f}%")
     
     with col3:
-        retention_rate = (conversion_data['Clientes Recurrentes'] / conversion_data['Primera Compra']) * 100 if conversion_data['Primera Compra'] > 0 else 0
-        st.metric("Tasa de Retención", f"{retention_rate:.1f}%")
+        retention_rate = (recurring / first_purchase) * 100 if first_purchase > 0 else 0
+        st.metric(get_string('customers_conversion_retention_rate', st.session_state.language), f"{retention_rate:.1f}%")
     
     st.markdown("---")
     
     # Lista de clientes
-    st.markdown("### 📋 Lista de Clientes")
+    st.markdown(f"### {get_string('customers_list', st.session_state.language)}")
     
     # Opciones de visualización
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.markdown(f"**Mostrando {len(filtered_customers)} clientes**")
+        st.markdown(f"**{get_string('customers_list_showing', st.session_state.language, count=len(filtered_customers))}**")
     
     with col2:
         sort_by = st.selectbox(
-            "Ordenar por:",
+            get_string('customers_list_sort_by', st.session_state.language),
             ["total_spent", "order_count", "last_order", "first_name"],
             format_func=lambda x: {
-                "total_spent": "Gasto Total",
-                "order_count": "Número de Pedidos",
-                "last_order": "Última Compra",
-                "first_name": "Nombre"
+                "total_spent": get_string('customers_list_sort_total_spent', st.session_state.language),
+                "order_count": get_string('customers_list_sort_order_count', st.session_state.language),
+                "last_order": get_string('customers_list_sort_last_order', st.session_state.language),
+                "first_name": get_string('customers_list_sort_name', st.session_state.language)
             }[x]
         )
     
     with col3:
-        sort_order = st.selectbox("Orden:", ["Descendente", "Ascendente"])
+        sort_options = [
+            get_string('customers_list_sort_descending', st.session_state.language),
+            get_string('customers_list_sort_ascending', st.session_state.language)
+        ]
+        sort_order = st.selectbox(
+            get_string('customers_list_sort_order', st.session_state.language),
+            sort_options
+        )
     
     # Aplicar ordenamiento
-    ascending = sort_order == "Ascendente"
+    ascending = sort_order == get_string('customers_list_sort_ascending', st.session_state.language)
     sorted_customers = filtered_customers.sort_values(sort_by, ascending=ascending)
     
     # Preparar datos para mostrar
     display_customers = sorted_customers.copy()
-    display_customers['Cliente'] = display_customers['first_name'] + ' ' + display_customers['last_name']
-    display_customers['Email'] = display_customers['email']
-    display_customers['País'] = display_customers['country']
-    display_customers['Segmento'] = display_customers['segment']
-    display_customers['Gasto Total'] = display_customers['total_spent'].apply(lambda x: f"€{x:.2f}")
-    display_customers['Pedidos'] = display_customers['order_count'].astype(int)
-    display_customers['Última Compra'] = display_customers['last_order'].apply(
-        lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else 'Nunca'
+    display_customers[get_string('customers_table_client', st.session_state.language)] = display_customers['first_name'] + ' ' + display_customers['last_name']
+    display_customers[get_string('customers_table_email', st.session_state.language)] = display_customers['email']
+    display_customers[get_string('customers_table_country', st.session_state.language)] = display_customers['country']
+    display_customers[get_string('customers_table_segment', st.session_state.language)] = display_customers['segment']
+    display_customers[get_string('customers_table_total_spent', st.session_state.language)] = display_customers['total_spent'].apply(lambda x: f"€{x:.2f}")
+    display_customers[get_string('customers_table_orders', st.session_state.language)] = display_customers['order_count'].astype(int)
+    display_customers[get_string('customers_table_last_purchase', st.session_state.language)] = display_customers['last_order'].apply(
+        lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else get_string('customers_table_never', st.session_state.language)
     )
     
     # Function to color segment cells
     def color_segment(val):
         colors = {
-            "Nuevo": "background-color: #ff9800; color: white;",
-            "Frecuente": "background-color: #2196f3; color: white;",
-            "VIP": "background-color: #9c27b0; color: white;",
-            "Regular": "background-color: #4caf50; color: white;",
-            "Inactivo": "background-color: #9e9e9e; color: white;",
-            "Sin Compras": "background-color: #f44336; color: white;"
+            get_string('customers_segment_new', st.session_state.language): "background-color: #ff9800; color: white;",
+            get_string('customers_segment_frequent', st.session_state.language): "background-color: #2196f3; color: white;",
+            get_string('customers_segment_vip', st.session_state.language): "background-color: #9c27b0; color: white;",
+            get_string('customers_segment_regular', st.session_state.language): "background-color: #4caf50; color: white;",
+            get_string('customers_segment_inactive', st.session_state.language): "background-color: #9e9e9e; color: white;",
+            get_string('customers_segment_no_purchases', st.session_state.language): "background-color: #f44336; color: white;"
         }
         return colors.get(val, "")
     
-    # Create styled dataframe (use .map instead of deprecated .applymap)
-    styled_df = display_customers[['Cliente', 'Email', 'País', 'Segmento', 'Gasto Total', 'Pedidos', 'Última Compra']].style.map(
+    # Create styled dataframe
+    styled_df = display_customers[[
+        get_string('customers_table_client', st.session_state.language),
+        get_string('customers_table_email', st.session_state.language),
+        get_string('customers_table_country', st.session_state.language),
+        get_string('customers_table_segment', st.session_state.language),
+        get_string('customers_table_total_spent', st.session_state.language),
+        get_string('customers_table_orders', st.session_state.language),
+        get_string('customers_table_last_purchase', st.session_state.language)
+    ]].style.map(
         color_segment,
-        subset=['Segmento']
+        subset=[get_string('customers_table_segment', st.session_state.language)]
     )
     
     # Mostrar tabla
@@ -687,18 +784,32 @@ def main():
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Cliente": st.column_config.TextColumn("Cliente", width="large"),
-            "Email": st.column_config.TextColumn("Email", width="large"),
-            "País": st.column_config.TextColumn("País", width="medium"),
-            "Segmento": st.column_config.TextColumn("Segmento", width="medium"),
-            "Gasto Total": st.column_config.TextColumn("Gasto Total", width="small"),
-            "Pedidos": st.column_config.NumberColumn("Pedidos", width="small"),
-            "Última Compra": st.column_config.TextColumn("Última Compra", width="medium")
+            get_string('customers_table_client', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_client', st.session_state.language), width="large"
+            ),
+            get_string('customers_table_email', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_email', st.session_state.language), width="large"
+            ),
+            get_string('customers_table_country', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_country', st.session_state.language), width="medium"
+            ),
+            get_string('customers_table_segment', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_segment', st.session_state.language), width="medium"
+            ),
+            get_string('customers_table_total_spent', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_total_spent', st.session_state.language), width="small"
+            ),
+            get_string('customers_table_orders', st.session_state.language): st.column_config.NumberColumn(
+                get_string('customers_table_orders', st.session_state.language), width="small"
+            ),
+            get_string('customers_table_last_purchase', st.session_state.language): st.column_config.TextColumn(
+                get_string('customers_table_last_purchase', st.session_state.language), width="medium"
+            )
         }
     )
     
     # Información adicional
-    st.markdown("### ℹ️ Insights de Clientes")
+    st.markdown(f"### {get_string('customers_insights', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
@@ -706,11 +817,11 @@ def main():
         top_spender = sorted_customers.iloc[0] if len(sorted_customers) > 0 else None
         if top_spender is not None:
             st.success(f"""
-            **🏆 Cliente Top:**
-            - {top_spender['first_name']} {top_spender['last_name']}
-            - Gasto total: €{top_spender['total_spent']:.2f}
-            - Pedidos: {int(top_spender['order_count'])}
-            - Segmento: {top_spender['segment']}
+            **{get_string('customers_insights_top', st.session_state.language)}**
+            - {get_string('customers_insights_top_name', st.session_state.language)} {top_spender['first_name']} {top_spender['last_name']}
+            - {get_string('customers_insights_top_spent', st.session_state.language)} €{top_spender['total_spent']:.2f}
+            - {get_string('customers_insights_top_orders', st.session_state.language)} {int(top_spender['order_count'])}
+            - {get_string('customers_insights_top_segment', st.session_state.language)} {top_spender['segment']}
             """)
     
     with col2:
@@ -718,10 +829,10 @@ def main():
         largest_segment = segment_distribution.index[0] if len(segment_distribution) > 0 else "N/A"
         
         st.info(f"""
-        **📊 Distribución de Segmentos:**
-        - Segmento principal: {largest_segment}
-        - Clientes en segmento: {segment_distribution.iloc[0] if len(segment_distribution) > 0 else 0}
-        - Países únicos: {filtered_customers['country'].nunique()}
+        **{get_string('customers_insights_distribution', st.session_state.language)}**
+        - {get_string('customers_insights_main_segment', st.session_state.language)} {largest_segment}
+        - {get_string('customers_insights_segment_count', st.session_state.language)} {segment_distribution.iloc[0] if len(segment_distribution) > 0 else 0}
+        - {get_string('customers_insights_unique_countries', st.session_state.language)} {filtered_customers['country'].nunique()}
         """)
 
 if __name__ == "__main__":
