@@ -15,4 +15,4 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # Si está autenticado, mostrar sidebar y redirigir
 sidebar_navigation()
-st.switch_page("app.py")
+sswitch_page("app")
