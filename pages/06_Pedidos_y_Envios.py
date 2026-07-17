@@ -10,6 +10,8 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from utils.data_generator import get_all_data
 from utils.chart_utils import create_delivery_time_chart
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Pedidos y Envíos", page_icon="📦", layout="wide")
 
@@ -27,6 +29,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 
 
@@ -339,10 +342,10 @@ def display_order_tracking(order_row):
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="orders-header">
-        <h1>📦 Pedidos y Envíos</h1>
-        <p>Gestión completa de pedidos y seguimiento de envíos en tiempo real</p>
+        <h1>{get_string('orders_title', st.session_state.language)}</h1>
+        <p>{get_string('orders_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
