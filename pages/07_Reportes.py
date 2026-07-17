@@ -19,6 +19,7 @@ from utils.pdf_generator import (
 )
 from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
 from i18n.strings import get_string
+from streamlit_extras.switch_page_button import switch_page
 
 st.set_page_config(page_title="Reportes", page_icon="📊", layout="wide")
 
