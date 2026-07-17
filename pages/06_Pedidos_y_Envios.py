@@ -23,6 +23,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
@@ -31,7 +35,6 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 # ✅ Mostrar el sidebar
 sidebar_navigation()
 inject_theme_css()
-
 
 
 # CSS personalizado
@@ -140,7 +143,7 @@ def load_orders_data():
         data = get_all_data()
         return data
     except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
+        st.error(f"{get_string('orders_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def enrich_orders_data(orders_df, customers_df, shipments_df):
@@ -163,7 +166,7 @@ def enrich_orders_data(orders_df, customers_df, shipments_df):
     enriched_orders['delivered_at'] = enriched_orders['actual_delivery']
     
     # Crear columna shipping_method basada en carrier
-    enriched_orders['shipping_method'] = enriched_orders['carrier'].fillna('Sin asignar')
+    enriched_orders['shipping_method'] = enriched_orders['carrier'].fillna(get_string('orders_shipping_unassigned', st.session_state.language))
     
     # Renombrar created_at a order_date para consistencia
     enriched_orders['order_date'] = enriched_orders['created_at']
@@ -207,22 +210,44 @@ def get_status_emoji(status):
     }
     return emojis.get(status, '❓')
 
+def get_payment_status_label(status):
+    """Retorna la etiqueta traducida para el estado de pago"""
+    labels = {
+        'pending': get_string('orders_payment_pending', st.session_state.language),
+        'paid': get_string('orders_payment_paid', st.session_state.language),
+        'failed': get_string('orders_payment_failed', st.session_state.language),
+        'refunded': get_string('orders_payment_refunded', st.session_state.language)
+    }
+    return labels.get(status, status)
+
+def get_status_label(status):
+    """Retorna la etiqueta traducida para el estado del pedido"""
+    labels = {
+        'pending': get_string('orders_filter_status_pending', st.session_state.language),
+        'processing': get_string('orders_filter_status_processing', st.session_state.language),
+        'shipped': get_string('orders_filter_status_shipped', st.session_state.language),
+        'delivered': get_string('orders_filter_status_delivered', st.session_state.language),
+        'cancelled': get_string('orders_filter_status_cancelled', st.session_state.language)
+    }
+    return labels.get(status, status)
+
 def create_order_status_timeline():
     """Crea timeline de estados de pedidos"""
     # Simular datos de timeline
     timeline_data = []
     statuses = ['pending', 'processing', 'shipped', 'delivered']
     
+    status_names = {
+        'pending': get_string('orders_timeline_pending', st.session_state.language),
+        'processing': get_string('orders_timeline_processing', st.session_state.language),
+        'shipped': get_string('orders_timeline_shipped', st.session_state.language),
+        'delivered': get_string('orders_timeline_delivered', st.session_state.language)
+    }
+    
     for i, status in enumerate(statuses):
         timeline_data.append({
             'step': i + 1,
-            'status': status.title(),
-            'description': {
-                'pending': 'Pedido recibido y confirmado',
-                'processing': 'Preparando el pedido',
-                'shipped': 'Pedido enviado',
-                'delivered': 'Pedido entregado'
-            }[status],
+            'status': status_names[status],
             'avg_time': [0, 1, 3, 7][i]  # Días promedio
         })
     
@@ -236,14 +261,14 @@ def create_order_status_timeline():
         mode='markers+lines',
         marker=dict(size=15, color='#3b82f6'),
         line=dict(color='#3b82f6', width=3),
-        hovertemplate='<b>%{y}</b><br>Día promedio: %{x}<br>%{text}<extra></extra>',
-        text=timeline_df['description']
+        hovertemplate='<b>%{y}</b><br>' + get_string('orders_timeline_step', st.session_state.language, days='%{x}') + '<extra></extra>',
+        text=[status_names[s] for s in statuses]
     ))
     
     fig.update_layout(
-        title='Timeline Promedio de Estados de Pedido',
-        xaxis_title='Días desde el Pedido',
-        yaxis_title='Estado del Pedido',
+        title=get_string('orders_timeline', st.session_state.language),
+        xaxis_title=get_string('orders_timeline_x', st.session_state.language),
+        yaxis_title=get_string('orders_timeline_y', st.session_state.language),
         template='plotly_white',
         height=400,
         xaxis=dict(range=[-0.5, 8])
@@ -267,30 +292,30 @@ def create_shipping_performance_chart(orders_df):
     
     # Barras para número de pedidos
     fig.add_trace(go.Bar(
-        name='Número de Pedidos',
+        name=get_string('orders_shipping_performance_orders', st.session_state.language),
         x=shipping_stats['shipping_method'],
         y=shipping_stats['order_count'],
         marker_color='#3b82f6',
         yaxis='y',
-        hovertemplate='<b>%{x}</b><br>Pedidos: %{y}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('orders_shipping_performance_orders_hover', st.session_state.language, count='%{y}') + '<extra></extra>'
     ))
     
     # Línea para tiempo promedio de entrega
     fig.add_trace(go.Scatter(
-        name='Tiempo Promedio (días)',
+        name=get_string('orders_shipping_performance_days', st.session_state.language),
         x=shipping_stats['shipping_method'],
         y=shipping_stats['avg_delivery_days'],
         mode='lines+markers',
         line=dict(color='#ef4444'),
         yaxis='y2',
-        hovertemplate='<b>%{x}</b><br>Días promedio: %{y:.1f}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('orders_shipping_performance_days_hover', st.session_state.language, days='%{y:.1f}') + '<extra></extra>'
     ))
     
     fig.update_layout(
-        title='Rendimiento por Método de Envío',
-        xaxis_title='Método de Envío',
-        yaxis=dict(title='Número de Pedidos', side='left'),
-        yaxis2=dict(title='Días Promedio de Entrega', side='right', overlaying='y'),
+        title=get_string('orders_shipping_performance', st.session_state.language),
+        xaxis_title=get_string('orders_shipping_performance_x', st.session_state.language),
+        yaxis=dict(title=get_string('orders_shipping_performance_orders', st.session_state.language), side='left'),
+        yaxis2=dict(title=get_string('orders_shipping_performance_days', st.session_state.language), side='right', overlaying='y'),
         template='plotly_white',
         height=400,
         hovermode='x unified'
@@ -304,13 +329,13 @@ def display_order_tracking(order_row):
     
     # Definir los pasos del timeline
     steps = [
-        ('pending', 'Pedido Confirmado', 'Hemos recibido tu pedido'),
-        ('processing', 'Preparando Pedido', 'Empaquetando tus productos'),
-        ('shipped', 'Enviado', 'Tu pedido está en camino'),
-        ('delivered', 'Entregado', 'Pedido entregado exitosamente')
+        ('pending', get_string('orders_tracking_confirmado', st.session_state.language), get_string('orders_tracking_confirmado_desc', st.session_state.language)),
+        ('processing', get_string('orders_tracking_preparando', st.session_state.language), get_string('orders_tracking_preparando_desc', st.session_state.language)),
+        ('shipped', get_string('orders_tracking_enviado', st.session_state.language), get_string('orders_tracking_enviado_desc', st.session_state.language)),
+        ('delivered', get_string('orders_tracking_entregado', st.session_state.language), get_string('orders_tracking_entregado_desc', st.session_state.language))
     ]
     
-    st.markdown("**📍 Seguimiento del Pedido:**")
+    st.markdown(f"**{get_string('orders_tracking', st.session_state.language)}**")
     
     for step_status, step_title, step_desc in steps:
         if step_status == current_status:
@@ -330,14 +355,17 @@ def display_order_tracking(order_row):
         """, unsafe_allow_html=True)
     
     # Información de envío si está disponible
-    if pd.notna(order_row['tracking_number']):
+    if pd.notna(order_row.get('tracking_number')):
+        estimated_date = order_row.get('estimated_delivery')
+        estimated_str = estimated_date.strftime('%d/%m/%Y') if pd.notna(estimated_date) else get_string('orders_shipment_not_available', st.session_state.language)
+        
         st.markdown(f"""
         <div class="shipment-info">
-            <strong>📦 Información de Envío:</strong><br>
-            • Número de seguimiento: {order_row['tracking_number']}<br>
-            • Transportista: {order_row['carrier']}<br>
-            • Método: {order_row['shipping_method']}<br>
-            • Fecha estimada: {order_row['estimated_delivery'].strftime('%d/%m/%Y') if pd.notna(order_row['estimated_delivery']) else 'No disponible'}
+            <strong>{get_string('orders_shipment_info', st.session_state.language)}</strong><br>
+            • {get_string('orders_shipment_tracking', st.session_state.language)} {order_row['tracking_number']}<br>
+            • {get_string('orders_shipment_carrier', st.session_state.language)} {order_row.get('carrier', get_string('orders_shipment_not_available', st.session_state.language))}<br>
+            • {get_string('orders_shipment_method', st.session_state.language)} {order_row.get('shipping_method', get_string('orders_shipment_not_available', st.session_state.language))}<br>
+            • {get_string('orders_shipment_estimated', st.session_state.language)} {estimated_str}
         </div>
         """, unsafe_allow_html=True)
 
@@ -363,25 +391,34 @@ def main():
     enriched_orders = enrich_orders_data(orders_df, customers_df, shipments_df)
     
     # Filtros
-    st.markdown("### 🔍 Filtros de Pedidos")
+    st.markdown(f"### {get_string('orders_filters', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        statuses = ['Todos'] + list(enriched_orders['status'].unique())
-        selected_status = st.selectbox("Estado del Pedido", statuses)
+        statuses = [get_string('orders_filter_status_all', st.session_state.language)] + list(enriched_orders['status'].unique())
+        selected_status = st.selectbox(
+            get_string('orders_filter_status', st.session_state.language),
+            statuses
+        )
     
     with col2:
-        shipping_methods = ['Todos'] + list(enriched_orders['shipping_method'].unique())
-        selected_shipping = st.selectbox("Método de Envío", shipping_methods)
+        shipping_methods = [get_string('orders_filter_shipping_all', st.session_state.language)] + list(enriched_orders['shipping_method'].unique())
+        selected_shipping = st.selectbox(
+            get_string('orders_filter_shipping', st.session_state.language),
+            shipping_methods
+        )
     
     with col3:
-        countries = ['Todos'] + list(enriched_orders['country'].unique())
-        selected_country = st.selectbox("País", countries)
+        countries = [get_string('orders_filter_country_all', st.session_state.language)] + list(enriched_orders['country'].unique())
+        selected_country = st.selectbox(
+            get_string('orders_filter_country', st.session_state.language),
+            countries
+        )
     
     with col4:
         date_range = st.date_input(
-            "Rango de Fechas",
+            get_string('orders_filter_date', st.session_state.language),
             value=(
                 enriched_orders['order_date'].min().date(),
                 enriched_orders['order_date'].max().date()
@@ -393,13 +430,13 @@ def main():
     # Aplicar filtros
     filtered_orders = enriched_orders.copy()
     
-    if selected_status != 'Todos':
+    if selected_status != get_string('orders_filter_status_all', st.session_state.language):
         filtered_orders = filtered_orders[filtered_orders['status'] == selected_status]
     
-    if selected_shipping != 'Todos':
+    if selected_shipping != get_string('orders_filter_shipping_all', st.session_state.language):
         filtered_orders = filtered_orders[filtered_orders['shipping_method'] == selected_shipping]
     
-    if selected_country != 'Todos':
+    if selected_country != get_string('orders_filter_country_all', st.session_state.language):
         filtered_orders = filtered_orders[filtered_orders['country'] == selected_country]
     
     if len(date_range) == 2:
@@ -410,50 +447,53 @@ def main():
         ]
     
     # Métricas principales
-    st.markdown("### 📊 Métricas de Pedidos")
+    st.markdown(f"### {get_string('orders_metrics', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:,}</h3>
-            <p>Total Pedidos</p>
+            <h3>{len(filtered_orders):,}</h3>
+            <p>{get_string('orders_metric_total', st.session_state.language)}</p>
         </div>
-        """.format(len(filtered_orders)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
         total_revenue = filtered_orders['total_amount'].sum()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>€{:,.2f}</h3>
-            <p>Revenue Total</p>
+            <h3>€{total_revenue:,.2f}</h3>
+            <p>{get_string('orders_metric_revenue', st.session_state.language)}</p>
         </div>
-        """.format(total_revenue), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         avg_order_value = filtered_orders['total_amount'].mean()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>€{:.2f}</h3>
-            <p>Valor Promedio</p>
+            <h3>€{avg_order_value:.2f}</h3>
+            <p>{get_string('orders_metric_avg_value', st.session_state.language)}</p>
         </div>
-        """.format(avg_order_value), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
         delivered_orders = len(filtered_orders[filtered_orders['status'] == 'delivered'])
         delivery_rate = (delivered_orders / len(filtered_orders)) * 100 if len(filtered_orders) > 0 else 0
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3>{:.1f}%</h3>
-            <p>Tasa de Entrega</p>
+            <h3>{delivery_rate:.1f}%</h3>
+            <p>{get_string('orders_metric_delivery_rate', st.session_state.language)}</p>
         </div>
-        """.format(delivery_rate), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Visualizaciones principales
-    st.markdown("### 📈 Análisis de Pedidos y Envíos")
+    st.markdown(f"### {get_string('orders_analysis', st.session_state.language)}")
+    
+    # Obtener el template de plotly
+    chart_template = get_plotly_template()
     
     col1, col2 = st.columns(2)
     
@@ -463,18 +503,18 @@ def main():
         
         fig = px.pie(
             values=status_counts.values,
-            names=[f"{get_status_emoji(status)} {status.title()}" for status in status_counts.index],
-            title="Distribución por Estado de Pedido",
+            names=[f"{get_status_emoji(status)} {get_status_label(status)}" for status in status_counts.index],
+            title=get_string('orders_status_distribution', st.session_state.language),
             color_discrete_sequence=[get_status_color(status) for status in status_counts.index]
         )
         
         fig.update_traces(
             textposition='inside',
             textinfo='percent+label',
-            hovertemplate='<b>%{label}</b><br>%{value} pedidos (%{percent})<extra></extra>'
+            hovertemplate='<b>%{label}</b><br>' + get_string('orders_status_distribution_hover', st.session_state.language, value='%{value}', percent='%{percent}') + '<extra></extra>'
         )
         
-        fig.update_layout(template="plotly_white", height=400)
+        fig.update_layout(template=chart_template, height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
@@ -491,13 +531,13 @@ def main():
     
     with col2:
         # Tiempo de entrega
-        delivery_chart = create_delivery_time_chart(filtered_orders)
+        delivery_chart = create_delivery_time_chart(filtered_orders, chart_template, st.session_state.language)
         st.plotly_chart(delivery_chart, use_container_width=True)
     
     st.markdown("---")
     
     # Análisis temporal
-    st.markdown("### 📊 Tendencias Temporales")
+    st.markdown(f"### {get_string('orders_trends', st.session_state.language)}")
     
     # Pedidos por día
     daily_orders = filtered_orders.groupby(filtered_orders['order_date'].dt.date).agg({
@@ -513,7 +553,7 @@ def main():
         x=daily_orders['date'],
         y=daily_orders['order_count'],
         mode='lines+markers',
-        name='Número de Pedidos',
+        name=get_string('orders_trends_count', st.session_state.language),
         line=dict(color='#3b82f6'),
         yaxis='y'
     ))
@@ -522,17 +562,17 @@ def main():
         x=daily_orders['date'],
         y=daily_orders['daily_revenue'],
         mode='lines+markers',
-        name='Revenue Diario (€)',
+        name=get_string('orders_trends_revenue', st.session_state.language),
         line=dict(color='#10b981'),
         yaxis='y2'
     ))
     
     fig.update_layout(
-        title='Tendencia de Pedidos y Revenue',
-        xaxis_title='Fecha',
-        yaxis=dict(title='Número de Pedidos', side='left'),
-        yaxis2=dict(title='Revenue Diario (€)', side='right', overlaying='y'),
-        template='plotly_white',
+        title=get_string('orders_trends_title', st.session_state.language),
+        xaxis_title=get_string('orders_trends_date', st.session_state.language),
+        yaxis=dict(title=get_string('orders_trends_count', st.session_state.language), side='left'),
+        yaxis2=dict(title=get_string('orders_trends_revenue', st.session_state.language), side='right', overlaying='y'),
+        template=chart_template,
         height=400,
         hovermode='x unified'
     )
@@ -542,29 +582,39 @@ def main():
     st.markdown("---")
     
     # Pedidos recientes con seguimiento
-    st.markdown("### 🔍 Pedidos Recientes con Seguimiento")
+    st.markdown(f"### {get_string('orders_recent', st.session_state.language)}")
     
     recent_orders = filtered_orders.nlargest(10, 'order_date')
     
     for _, order in recent_orders.iterrows():
         status_class = f"status-{order['status']}"
         
-        with st.expander(f"{get_status_emoji(order['status'])} Pedido #{order['id']} - {order['first_name']} {order['last_name']} - €{order['total_amount']:.2f}"):
+        expander_label = get_string('orders_recent_expander', st.session_state.language,
+            emoji=get_status_emoji(order['status']),
+            id=order['id'],
+            name=f"{order['first_name']} {order['last_name']}",
+            amount=order['total_amount']
+        )
+        
+        with st.expander(expander_label):
             col1, col2 = st.columns([2, 1])
             
             with col1:
+                payment_method = order.get('metodo_pago', get_string('orders_details_not_available', st.session_state.language))
+                payment_status = order.get('estado_pago', get_string('orders_details_not_available', st.session_state.language))
+                
                 st.markdown(f"""
                 <div class="order-card {status_class}">
-                    <h4>📋 Detalles del Pedido</h4>
-                    <p><strong>👤 Cliente:</strong> {order['first_name']} {order['last_name']}</p>
-                    <p><strong>📧 Email:</strong> {order['email']}</p>
-                    <p><strong>🌍 País:</strong> {order['country']}</p>
-                    <p><strong>💰 Total:</strong> €{order['total_amount']:.2f}</p>
-                    <p><strong>💳 Método de Pago:</strong> {order['metodo_pago'] if 'metodo_pago' in order else 'No disponible'}</p>
-                    <p><strong>💵 Estado de Pago:</strong> {order['estado_pago'] if 'estado_pago' in order else 'No disponible'}</p>
-                    <p><strong>📅 Fecha:</strong> {order['order_date'].strftime('%d/%m/%Y %H:%M')}</p>
-                    <p><strong>🚚 Método de Envío:</strong> {order['shipping_method']}</p>
-                    <p><strong>📊 Estado:</strong> {get_status_emoji(order['status'])} {order['status'].title()}</p>
+                    <h4>{get_string('orders_details', st.session_state.language)}</h4>
+                    <p><strong>{get_string('orders_details_client', st.session_state.language)}</strong> {order['first_name']} {order['last_name']}</p>
+                    <p><strong>{get_string('orders_details_email', st.session_state.language)}</strong> {order['email']}</p>
+                    <p><strong>{get_string('orders_details_country', st.session_state.language)}</strong> {order['country']}</p>
+                    <p><strong>{get_string('orders_details_total', st.session_state.language)}</strong> €{order['total_amount']:.2f}</p>
+                    <p><strong>{get_string('orders_details_payment_method', st.session_state.language)}</strong> {payment_method}</p>
+                    <p><strong>{get_string('orders_details_payment_status', st.session_state.language)}</strong> {get_payment_status_label(payment_status)}</p>
+                    <p><strong>{get_string('orders_details_date', st.session_state.language)}</strong> {order['order_date'].strftime('%d/%m/%Y %H:%M')}</p>
+                    <p><strong>{get_string('orders_details_shipping', st.session_state.language)}</strong> {order['shipping_method']}</p>
+                    <p><strong>{get_string('orders_details_status', st.session_state.language)}</strong> {get_status_emoji(order['status'])} {get_status_label(order['status'])}</p>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -572,95 +622,137 @@ def main():
                 display_order_tracking(order)
                 
                 # Acciones rápidas
-                st.markdown("**⚡ Acciones Rápidas:**")
+                st.markdown(f"**{get_string('orders_actions', st.session_state.language)}**")
                 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    if st.button(f"📧 Notificar Cliente", key=f"notify_{order['id']}"):
-                        st.success("Notificación enviada!")
+                    if st.button(get_string('orders_action_notify', st.session_state.language), key=f"notify_{order['id']}"):
+                        st.success(get_string('orders_action_notify_sent', st.session_state.language))
                 
                 with col_b:
-                    if st.button(f"📋 Ver Detalles", key=f"details_{order['id']}"):
-                        st.info("Redirigiendo a detalles...")
+                    if st.button(get_string('orders_action_details', st.session_state.language), key=f"details_{order['id']}"):
+                        st.info(get_string('orders_action_details_info', st.session_state.language))
     
     st.markdown("---")
     
     # Tabla completa de pedidos
-    st.markdown("### 📋 Lista Completa de Pedidos")
+    st.markdown(f"### {get_string('orders_list', st.session_state.language)}")
     
     # Opciones de ordenamiento
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.markdown(f"**Mostrando {len(filtered_orders)} pedidos**")
+        st.markdown(f"**{get_string('orders_list_showing', st.session_state.language, count=len(filtered_orders))}**")
     
     with col2:
         sort_by = st.selectbox(
-            "Ordenar por:",
+            get_string('orders_list_sort_by', st.session_state.language),
             ["order_date", "total_amount", "status", "customer_id"],
             format_func=lambda x: {
-                "order_date": "Fecha",
-                "total_amount": "Monto Total",
-                "status": "Estado",
-                "customer_id": "Cliente"
+                "order_date": get_string('orders_list_sort_date', st.session_state.language),
+                "total_amount": get_string('orders_list_sort_amount', st.session_state.language),
+                "status": get_string('orders_list_sort_status', st.session_state.language),
+                "customer_id": get_string('orders_list_sort_customer', st.session_state.language)
             }[x]
         )
     
     with col3:
-        sort_order = st.selectbox("Orden:", ["Descendente", "Ascendente"])
+        sort_options = [
+            get_string('orders_list_sort_descending', st.session_state.language),
+            get_string('orders_list_sort_ascending', st.session_state.language)
+        ]
+        sort_order = st.selectbox(
+            get_string('orders_list_sort_order', st.session_state.language),
+            sort_options
+        )
     
     # Aplicar ordenamiento
-    ascending = sort_order == "Ascendente"
+    ascending = sort_order == get_string('orders_list_sort_ascending', st.session_state.language)
     sorted_orders = filtered_orders.sort_values(sort_by, ascending=ascending)
     
     # Preparar datos para mostrar
     display_orders = sorted_orders.copy()
-    display_orders['ID'] = display_orders['id']
-    display_orders['Cliente'] = display_orders['first_name'] + ' ' + display_orders['last_name']
-    display_orders['Email'] = display_orders['email']
-    display_orders['País'] = display_orders['country']
-    display_orders['Total'] = display_orders['total_amount'].apply(lambda x: f"€{x:.2f}")
-    display_orders['Método Pago'] = display_orders['metodo_pago'] if 'metodo_pago' in display_orders else 'No disponible'
-    display_orders['Estado Pago'] = display_orders['estado_pago'] if 'estado_pago' in display_orders else 'No disponible'
-    display_orders['Estado'] = display_orders['status'].apply(lambda x: f"{get_status_emoji(x)} {x.title()}")
-    display_orders['Fecha'] = display_orders['order_date'].dt.strftime('%d/%m/%Y')
-    display_orders['Envío'] = display_orders['shipping_method']
+    display_orders[get_string('orders_table_id', st.session_state.language)] = display_orders['id']
+    display_orders[get_string('orders_table_client', st.session_state.language)] = display_orders['first_name'] + ' ' + display_orders['last_name']
+    display_orders[get_string('orders_table_email', st.session_state.language)] = display_orders['email']
+    display_orders[get_string('orders_table_country', st.session_state.language)] = display_orders['country']
+    display_orders[get_string('orders_table_total', st.session_state.language)] = display_orders['total_amount'].apply(lambda x: f"€{x:.2f}")
+    
+    payment_method_col = order.get('metodo_pago', get_string('orders_details_not_available', st.session_state.language))
+    display_orders[get_string('orders_table_payment_method', st.session_state.language)] = display_orders.apply(lambda x: x.get('metodo_pago', get_string('orders_details_not_available', st.session_state.language)), axis=1)
+    display_orders[get_string('orders_table_payment_status', st.session_state.language)] = display_orders.apply(lambda x: get_payment_status_label(x.get('estado_pago', get_string('orders_details_not_available', st.session_state.language))), axis=1)
+    
+    display_orders[get_string('orders_table_status', st.session_state.language)] = display_orders['status'].apply(lambda x: f"{get_status_emoji(x)} {get_status_label(x)}")
+    display_orders[get_string('orders_table_date', st.session_state.language)] = display_orders['order_date'].dt.strftime('%d/%m/%Y')
+    display_orders[get_string('orders_table_shipping', st.session_state.language)] = display_orders['shipping_method']
     
     # Mostrar tabla
     st.dataframe(
-        display_orders[['ID', 'Cliente', 'Email', 'País', 'Total', 'Método Pago', 'Estado Pago', 'Estado', 'Fecha', 'Envío']],
+        display_orders[[
+            get_string('orders_table_id', st.session_state.language),
+            get_string('orders_table_client', st.session_state.language),
+            get_string('orders_table_email', st.session_state.language),
+            get_string('orders_table_country', st.session_state.language),
+            get_string('orders_table_total', st.session_state.language),
+            get_string('orders_table_payment_method', st.session_state.language),
+            get_string('orders_table_payment_status', st.session_state.language),
+            get_string('orders_table_status', st.session_state.language),
+            get_string('orders_table_date', st.session_state.language),
+            get_string('orders_table_shipping', st.session_state.language)
+        ]],
         use_container_width=True,
         hide_index=True,
         column_config={
-            "ID": st.column_config.TextColumn("ID", width="small"),
-            "Cliente": st.column_config.TextColumn("Cliente", width="medium"),
-            "Email": st.column_config.TextColumn("Email", width="large"),
-            "País": st.column_config.TextColumn("País", width="small"),
-            "Total": st.column_config.TextColumn("Total", width="small"),
-            "Método Pago": st.column_config.TextColumn("Método Pago", width="medium"),
-            "Estado Pago": st.column_config.TextColumn("Estado Pago", width="medium"),
-            "Estado": st.column_config.TextColumn("Estado", width="medium"),
-            "Fecha": st.column_config.TextColumn("Fecha", width="small"),
-            "Envío": st.column_config.TextColumn("Método de Envío", width="medium")
+            get_string('orders_table_id', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_id', st.session_state.language), width="small"
+            ),
+            get_string('orders_table_client', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_client', st.session_state.language), width="medium"
+            ),
+            get_string('orders_table_email', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_email', st.session_state.language), width="large"
+            ),
+            get_string('orders_table_country', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_country', st.session_state.language), width="small"
+            ),
+            get_string('orders_table_total', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_total', st.session_state.language), width="small"
+            ),
+            get_string('orders_table_payment_method', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_payment_method', st.session_state.language), width="medium"
+            ),
+            get_string('orders_table_payment_status', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_payment_status', st.session_state.language), width="medium"
+            ),
+            get_string('orders_table_status', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_status', st.session_state.language), width="medium"
+            ),
+            get_string('orders_table_date', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_date', st.session_state.language), width="small"
+            ),
+            get_string('orders_table_shipping', st.session_state.language): st.column_config.TextColumn(
+                get_string('orders_table_shipping', st.session_state.language), width="medium"
+            )
         }
     )
     
     # Resumen y estadísticas
-    st.markdown("### 📊 Resumen Ejecutivo")
+    st.markdown(f"### {get_string('orders_executive_summary', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
     with col1:
         # Estadísticas de rendimiento
-        avg_delivery_time = filtered_orders['delivery_time_days'].mean()
+        avg_delivery_time = filtered_orders['delivery_time_days'].mean() if not filtered_orders['delivery_time_days'].isna().all() else 0
         pending_orders = len(filtered_orders[filtered_orders['status'] == 'pending'])
+        top_shipping = filtered_orders['shipping_method'].mode().iloc[0] if len(filtered_orders) > 0 else 'N/A'
         
         st.info(f"""
-        **⚡ Rendimiento de Envíos:**
-        - Tiempo promedio de entrega: {avg_delivery_time:.1f} días
-        - Pedidos pendientes: {pending_orders}
-        - Tasa de entrega exitosa: {delivery_rate:.1f}%
-        - Método de envío más usado: {filtered_orders['shipping_method'].mode().iloc[0] if len(filtered_orders) > 0 else 'N/A'}
+        **{get_string('orders_summary_shipping', st.session_state.language)}**
+        - {get_string('orders_summary_avg_delivery', st.session_state.language, days=avg_delivery_time)}
+        - {get_string('orders_summary_pending', st.session_state.language, count=pending_orders)}
+        - {get_string('orders_summary_delivery_rate', st.session_state.language, rate=delivery_rate)}
+        - {get_string('orders_summary_top_shipping', st.session_state.language, method=top_shipping)}
         """)
     
     with col2:
@@ -672,13 +764,14 @@ def main():
         
         top_country = country_stats.index[0] if len(country_stats) > 0 else "N/A"
         top_country_revenue = country_stats.iloc[0]['total_amount'] if len(country_stats) > 0 else 0
+        international_orders = len(filtered_orders[filtered_orders['country'] != 'Spain'])
         
         st.success(f"""
-        **🌍 Análisis Geográfico:**
-        - País con más pedidos: {top_country}
-        - Revenue del país top: €{top_country_revenue:.2f}
-        - Países únicos: {filtered_orders['country'].nunique()}
-        - Pedidos internacionales: {len(filtered_orders[filtered_orders['country'] != 'Spain'])}
+        **{get_string('orders_summary_geographic', st.session_state.language)}**
+        - {get_string('orders_summary_top_country', st.session_state.language, country=top_country)}
+        - {get_string('orders_summary_top_revenue', st.session_state.language, revenue=top_country_revenue)}
+        - {get_string('orders_summary_unique_countries', st.session_state.language, count=filtered_orders['country'].nunique())}
+        - {get_string('orders_summary_international', st.session_state.language, count=international_orders)}
         """)
 
 if __name__ == "__main__":
