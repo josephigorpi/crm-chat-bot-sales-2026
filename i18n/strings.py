@@ -35,10 +35,10 @@ STRINGS = {
         "sidebar_page_reports": "📊 07_Reportes: Generación de informes",
         "sidebar_page_settings": "⚙️ 08_Configuracion: Ajustes del sistema",
         "sidebar_theme": "🌓 Tema",
-        "sidebar_theme_dark": "🌙 Oscuro",
-        "sidebar_theme_light": "☀️ Claro",
+        "sidebar_theme_dark": " Oscuro",
+        "sidebar_theme_light": " Claro",
         "sidebar_language": "🌐 Idioma",
-        "sidebar_logout": "🚪 Cerrar Sesión",
+        "sidebar_logout": " Cerrar Sesión",
         
         # === Dashboard Principal ===
         "dashboard_title": "📊 Dashboard Principal",
@@ -200,6 +200,19 @@ STRINGS = {
         "chart_inventory_by_category": "Inventario Total por Categoría",
         "chart_inventory_category": "Categoría",
         "chart_inventory_stock": "Unidades en Stock",
+# === Páginas pendientes: Clientes, Conversaciones, Carritos, Pedidos, Reportes, Configuración ===
+        "customers_title": "👥 Gestión de Clientes",
+        "customers_subtitle": "Análisis completo de la base de clientes y segmentación inteligente",
+        "conversations_title": "💬 Conversaciones y Chatbot",
+        "conversations_subtitle": "Análisis de efectividad del chatbot y gestión de conversaciones con clientes",
+        "carts_title": "🛒 Carritos Abandonados",
+        "carts_subtitle": "Análisis y estrategias de recuperación para maximizar conversiones",
+        "orders_title": "📦 Pedidos y Envíos",
+        "orders_subtitle": "Gestión completa de pedidos y seguimiento de envíos en tiempo real",
+        "reports_title": "📊 Centro de Reportes",
+        "reports_subtitle": "Análisis avanzados y generación de reportes ejecutivos en PDF",
+        "config_title": "⚙️ Configuración del Sistema",
+        "config_subtitle": "Personaliza y administra tu dashboard de ventas con IA",
     },
     "en": {
         # === Authentication (app.py) ===
@@ -232,10 +245,10 @@ STRINGS = {
         "sidebar_page_reports": "📊 07_Reports: Report Generation",
         "sidebar_page_settings": "⚙️ 08_Settings: System Settings",
         "sidebar_theme": "🌓 Theme",
-        "sidebar_theme_dark": "🌙 Dark",
-        "sidebar_theme_light": "☀️ Light",
+        "sidebar_theme_dark": " Dark",
+        "sidebar_theme_light": " Light",
         "sidebar_language": "🌐 Language",
-        "sidebar_logout": "🚪 Sign Out",
+        "sidebar_logout": " Sign Out",
         
         # === Main Dashboard ===
         "dashboard_title": "📊 Main Dashboard",
@@ -397,6 +410,18 @@ STRINGS = {
         "chart_inventory_by_category": "Total Inventory by Category",
         "chart_inventory_category": "Category",
         "chart_inventory_stock": "Units in Stock",
+        "customers_title": "👥 Customer Management",
+        "customers_subtitle": "Complete analysis of the customer base and smart segmentation",
+        "conversations_title": "💬 Conversations & Chatbot",
+        "conversations_subtitle": "Chatbot effectiveness analysis and customer conversation management",
+        "carts_title": "🛒 Abandoned Carts",
+        "carts_subtitle": "Analysis and recovery strategies to maximize conversions",
+        "orders_title": "📦 Orders & Shipping",
+        "orders_subtitle": "Complete order management and real-time shipment tracking",
+        "reports_title": "📊 Reports Center",
+        "reports_subtitle": "Advanced analytics and executive PDF report generation",
+        "config_title": "⚙️ System Settings",
+        "config_subtitle": "Customize and manage your AI-powered sales dashboard",
     }
 }
 
