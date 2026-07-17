@@ -31,7 +31,7 @@ from sidebar import sidebar_navigation
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.switch_page("app.py")
+    switch_page("app")
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
