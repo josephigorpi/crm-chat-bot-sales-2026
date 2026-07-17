@@ -10,6 +10,8 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from utils.data_generator import get_all_data
 from utils.chart_utils import create_customer_segments_chart, create_customer_conversion_funnel
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Clientes", page_icon="👥", layout="wide")
 
@@ -25,6 +27,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 
 # CSS personalizado
@@ -284,10 +287,10 @@ def create_customer_activity_heatmap(customers_df):
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="customer-header">
-        <h1>👥 Gestión de Clientes</h1>
-        <p>Análisis completo de la base de clientes y segmentación inteligente</p>
+        <h1>{get_string('customers_title', st.session_state.language)}</h1>
+        <p>{get_string('customers_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
