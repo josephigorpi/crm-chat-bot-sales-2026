@@ -75,10 +75,10 @@ def sidebar_navigation():
         # Botón toggle con ícono dinámico
         current_theme = get_theme()
         if current_theme == 'light':
-        #    icon = "🌙"
+            icon = "🌙"
             label = get_string('sidebar_theme_dark', st.session_state.language)
         else:
-        #    icon = "☀️"
+            icon = "☀️"
             label = get_string('sidebar_theme_light', st.session_state.language)
         
         if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle"):
