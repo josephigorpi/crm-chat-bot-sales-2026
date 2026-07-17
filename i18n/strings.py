@@ -151,8 +151,8 @@ STRINGS = {
         "products_info_highest_price": "Precio más alto:",
         "products_analysis": "📈 Análisis Visual",
         "products_catalog": "📋 Catálogo de Productos",
-        "products_debug_added": "🔍 Debug: Se encontraron {count} productos agregados en session_state",
-        "products_debug_total": "🔍 Debug: Total de productos (originales + agregados): {count}",
+        "products_debug_added": "Debug: Se encontraron {count} productos agregados en session_state",
+        "products_debug_total": "Debug: Total de productos (originales + agregados): {count}",
         "products_load_error": "Error al cargar datos:",
         
         # === Gráficos ===
@@ -361,8 +361,8 @@ STRINGS = {
         "products_info_highest_price": "Highest price:",
         "products_analysis": "📈 Visual Analysis",
         "products_catalog": "📋 Product Catalog",
-        "products_debug_added": "🔍 Debug: Found {count} added products in session_state",
-        "products_debug_total": "🔍 Debug: Total products (original + added): {count}",
+        "products_debug_added": "Debug: Found {count} added products in session_state",
+        "products_debug_total": "Debug: Total products (original + added): {count}",
         "products_load_error": "Error loading data:",
         
         # === Charts ===
