@@ -29,6 +29,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
 
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
@@ -210,7 +214,7 @@ def load_reports_data():
         
         return data
     except Exception as e:
-        st.error(f"Error al cargar los datos: {str(e)}")
+        st.error(f"{get_string('reports_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def calculate_kpis(data):
@@ -255,7 +259,7 @@ def calculate_kpis(data):
         'abandoned_value': abandoned_value
     }
 
-def create_revenue_trend_chart(orders_df):
+def create_revenue_trend_chart(orders_df, chart_template):
     """Crea gráfico de tendencia de ingresos"""
     # Crear copia para evitar modificar el DataFrame original
     orders_df = orders_df.copy()
@@ -277,23 +281,23 @@ def create_revenue_trend_chart(orders_df):
         x=monthly_revenue['month'],
         y=monthly_revenue['total_amount'],
         mode='lines+markers',
-        name='Revenue Mensual',
+        name=get_string('reports_trends_revenue', st.session_state.language),
         line=dict(color='#3b82f6', width=3),
         marker=dict(size=8),
-        hovertemplate='<b>%{x}</b><br>Revenue: €%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('reports_trends_revenue_hover', st.session_state.language, y='%{y}') + '<extra></extra>'
     ))
     
     fig.update_layout(
-        title='Tendencia de Revenue Mensual',
-        xaxis_title='Mes',
-        yaxis_title='Revenue (€)',
-        template='plotly_white',
+        title=get_string('reports_trends_revenue', st.session_state.language),
+        xaxis_title=get_string('reports_trends_revenue_month', st.session_state.language),
+        yaxis_title=get_string('reports_trends_revenue_amount', st.session_state.language),
+        template=chart_template,
         height=400
     )
     
     return fig
 
-def create_customer_acquisition_chart(customers_df):
+def create_customer_acquisition_chart(customers_df, chart_template):
     """Crea gráfico de adquisición de clientes"""
     customers_df['created_at'] = pd.to_datetime(customers_df['created_at'])
     monthly_customers = customers_df.groupby(customers_df['created_at'].dt.to_period('M')).size().reset_index()
@@ -304,23 +308,27 @@ def create_customer_acquisition_chart(customers_df):
         monthly_customers,
         x='month',
         y='new_customers',
-        title='Adquisición de Clientes por Mes',
+        title=get_string('reports_trends_customers', st.session_state.language),
         color='new_customers',
         color_continuous_scale='Blues'
     )
     
     fig.update_layout(
-        template='plotly_white',
+        template=chart_template,
         height=400,
-        showlegend=False
+        showlegend=False,
+        xaxis_title=get_string('reports_trends_revenue_month', st.session_state.language),
+        yaxis_title=get_string('reports_trends_customers_count', st.session_state.language)
     )
     
     return fig
 
-def create_performance_radar_chart(kpis):
+def create_performance_radar_chart(kpis, chart_template):
     """Crea gráfico radar de rendimiento"""
     # Normalizar KPIs a escala 0-100
-    categories = ['Revenue', 'Pedidos', 'Clientes', 'Resolución', 'Satisfacción']
+    categories = [
+        get_string('reports_radar_categories', st.session_state.language).split(', ')
+    ][0]
     
     # Valores normalizados (simulados para el ejemplo)
     values = [85, 78, 92, kpis['resolution_rate'], 88]
@@ -331,7 +339,7 @@ def create_performance_radar_chart(kpis):
         r=values,
         theta=categories,
         fill='toself',
-        name='Rendimiento Actual',
+        name=get_string('reports_radar_performance', st.session_state.language),
         line_color='#3b82f6',
         fillcolor='rgba(59, 130, 246, 0.3)'
     ))
@@ -343,8 +351,9 @@ def create_performance_radar_chart(kpis):
                 range=[0, 100]
             )),
         showlegend=True,
-        title="Radar de Rendimiento General",
-        height=400
+        title=get_string('reports_radar', st.session_state.language),
+        height=400,
+        template=chart_template
     )
     
     return fig
@@ -359,31 +368,30 @@ def generate_executive_summary(data, kpis):
     customer_growth = 8.7  # Simulado
     
     # Identificar tendencias
-    top_product = "Producto más vendido"  # Simplificado
     # Obtener el país con más ingresos usando datos de customers
     orders_with_country = orders_df.merge(customers_df[['id', 'country']], left_on='customer_id', right_on='id', how='left')
     top_country = orders_with_country.groupby('country')['total_amount'].sum().idxmax() if len(orders_with_country) > 0 else "N/A"
     
     summary = f"""
-    ## 📈 Resumen Ejecutivo
+    ## {get_string('reports_executive_summary', st.session_state.language)}
     
-    ### Rendimiento General
-    - **Revenue Total:** €{kpis['revenue']:,.2f} (+{revenue_growth}% vs mes anterior)
-    - **Pedidos Procesados:** {kpis['orders']:,} pedidos
-    - **Valor Promedio de Pedido:** €{kpis['aov']:.2f}
-    - **Tasa de Resolución:** {kpis['resolution_rate']:.1f}%
+    ### {get_string('reports_summary_general', st.session_state.language)}
+    - {get_string('reports_summary_revenue', st.session_state.language, value=kpis['revenue'], growth=revenue_growth)}
+    - {get_string('reports_summary_orders', st.session_state.language, value=kpis['orders'])}
+    - {get_string('reports_summary_aov', st.session_state.language, value=kpis['aov'])}
+    - {get_string('reports_summary_resolution', st.session_state.language, value=kpis['resolution_rate'])}
     
-    ### Insights Clave
-    - 🎯 **Mercado Principal:** {top_country} genera el mayor revenue
-    - 👥 **Crecimiento de Clientes:** +{customer_growth}% nuevos clientes
-    - 🛒 **Carritos Abandonados:** €{kpis['abandoned_value']:,.2f} en valor potencial
-    - 💬 **Efectividad del Chatbot:** {kpis['resolution_rate']:.1f}% de resolución
+    ### {get_string('reports_summary_insights', st.session_state.language)}
+    - {get_string('reports_summary_top_market', st.session_state.language, country=top_country)}
+    - {get_string('reports_summary_customer_growth', st.session_state.language, growth=customer_growth)}
+    - {get_string('reports_summary_abandoned_value', st.session_state.language, value=kpis['abandoned_value'])}
+    - {get_string('reports_summary_chatbot_rate', st.session_state.language, rate=kpis['resolution_rate'])}
     
-    ### Recomendaciones
-    1. **Optimizar conversión:** Implementar estrategias de recuperación de carritos abandonados
-    2. **Expandir mercados:** Considerar expansión en mercados con alto potencial
-    3. **Mejorar chatbot:** Entrenar en intents con baja tasa de éxito
-    4. **Fidelización:** Desarrollar programas de lealtad para clientes VIP
+    ### {get_string('reports_summary_recommendations', st.session_state.language)}
+    {get_string('reports_summary_rec_optimize', st.session_state.language)}
+    {get_string('reports_summary_rec_expand', st.session_state.language)}
+    {get_string('reports_summary_rec_chatbot', st.session_state.language)}
+    {get_string('reports_summary_rec_loyalty', st.session_state.language)}
     """
     
     return summary
@@ -402,61 +410,69 @@ def main():
     if data is None:
         return
     
+    # Obtener template de plotly
+    chart_template = get_plotly_template()
+    
     # Calcular KPIs
     kpis = calculate_kpis(data)
     
     # Dashboard de KPIs principales
-    st.markdown("### 🎯 Dashboard de KPIs")
+    st.markdown(f"### {get_string('reports_kpi_dashboard', st.session_state.language)}")
     
     st.markdown("""
     <div class="kpi-dashboard">
         <div class="kpi-card">
             <div class="kpi-value">€{:,.0f}</div>
-            <div class="kpi-label">Revenue Total</div>
+            <div class="kpi-label">{}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-value">{:,}</div>
-            <div class="kpi-label">Pedidos Totales</div>
+            <div class="kpi-label">{}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-value">{:,}</div>
-            <div class="kpi-label">Clientes Activos</div>
+            <div class="kpi-label">{}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-value">{:.1f}%</div>
-            <div class="kpi-label">Tasa Resolución</div>
+            <div class="kpi-label">{}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-value">€{:,.0f}</div>
-            <div class="kpi-label">Carritos Abandonados</div>
+            <div class="kpi-label">{}</div>
         </div>
     </div>
     """.format(
         kpis['revenue'],
+        get_string('reports_kpi_revenue', st.session_state.language),
         kpis['orders'],
+        get_string('reports_kpi_orders', st.session_state.language),
         kpis['active_customers'],
+        get_string('reports_kpi_active_customers', st.session_state.language),
         kpis['resolution_rate'],
-        kpis['abandoned_value']
+        get_string('reports_kpi_resolution_rate', st.session_state.language),
+        kpis['abandoned_value'],
+        get_string('reports_kpi_abandoned_value', st.session_state.language)
     ), unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Visualizaciones de tendencias
-    st.markdown("### 📈 Análisis de Tendencias")
+    st.markdown(f"### {get_string('reports_trends', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        revenue_chart = create_revenue_trend_chart(data['orders'])
+        revenue_chart = create_revenue_trend_chart(data['orders'], chart_template)
         st.plotly_chart(revenue_chart, use_container_width=True)
     
     with col2:
-        customer_chart = create_customer_acquisition_chart(data['customers'])
+        customer_chart = create_customer_acquisition_chart(data['customers'], chart_template)
         st.plotly_chart(customer_chart, use_container_width=True)
     
     # Análisis de métodos de pago
-    st.markdown("### 💳 Análisis de Métodos de Pago")
-    if 'metodo_pago' in data['orders']:
+    st.markdown(f"### {get_string('reports_payment_analysis', st.session_state.language)}")
+    if 'metodo_pago' in data['orders'].columns:
         payment_counts = data['orders']['metodo_pago'].value_counts()
         payment_revenue = data['orders'].groupby('metodo_pago')['total_amount'].sum()
         
@@ -464,32 +480,32 @@ def main():
         fig.add_trace(go.Bar(
             x=payment_counts.index,
             y=payment_counts.values,
-            name='Número de Pedidos',
+            name=get_string('reports_payment_orders', st.session_state.language),
             marker_color='#3b82f6'
         ))
         fig.add_trace(go.Bar(
             x=payment_revenue.index,
             y=payment_revenue.values,
-            name='Revenue',
+            name=get_string('reports_payment_revenue', st.session_state.language),
             marker_color='#10b981',
             yaxis='y2'
         ))
         fig.update_layout(
-            title='Uso de Métodos de Pago',
-            yaxis=dict(title='Número de Pedidos'),
-            yaxis2=dict(title='Revenue (€)', overlaying='y', side='right'),
+            title=get_string('reports_payment_title', st.session_state.language),
+            yaxis=dict(title=get_string('reports_payment_orders', st.session_state.language)),
+            yaxis2=dict(title=get_string('reports_payment_revenue', st.session_state.language), overlaying='y', side='right'),
             barmode='group',
-            template='plotly_white',
+            template=chart_template,
             height=400
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No hay datos de métodos de pago disponibles.")
+        st.info(get_string('reports_no_payment_data', st.session_state.language))
     
     col1, col2 = st.columns(2)
     
     with col1:
-        radar_chart = create_performance_radar_chart(kpis)
+        radar_chart = create_performance_radar_chart(kpis, chart_template)
         st.plotly_chart(radar_chart, use_container_width=True)
     
     with col2:
@@ -506,16 +522,18 @@ def main():
             x=country_revenue.values,
             y=country_revenue.index,
             orientation='h',
-            title='Revenue por País (Top 10)',
+            title=get_string('reports_country_revenue', st.session_state.language),
             color=country_revenue.values,
             color_continuous_scale='Viridis'
         )
         
         fig.update_layout(
-            template='plotly_white',
+            template=chart_template,
             height=400,
             showlegend=False,
-            yaxis={'categoryorder': 'total ascending'}
+            yaxis={'categoryorder': 'total ascending'},
+            xaxis_title=get_string('reports_payment_revenue', st.session_state.language),
+            yaxis_title=get_string('orders_filter_country', st.session_state.language)
         )
         
         st.plotly_chart(fig, use_container_width=True)
@@ -529,49 +547,57 @@ def main():
     st.markdown("---")
     
     # Sección de generación de reportes
-    st.markdown("### 📋 Generación de Reportes PDF")
+    st.markdown(f"### {get_string('reports_generation', st.session_state.language)}")
     
     # Configuración de reportes
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("**Configuración de Reportes:**")
+        st.markdown(f"**{get_string('reports_config', st.session_state.language)}**")
         
         # Selector de período
         period_options = {
-            "Último mes": 30,
-            "Últimos 3 meses": 90,
-            "Últimos 6 meses": 180,
-            "Último año": 365
+            get_string('reports_period_last_month', st.session_state.language): 30,
+            get_string('reports_period_last_3months', st.session_state.language): 90,
+            get_string('reports_period_last_6months', st.session_state.language): 180,
+            get_string('reports_period_last_year', st.session_state.language): 365
         }
         
-        selected_period = st.selectbox("Período de análisis:", list(period_options.keys()))
+        selected_period = st.selectbox(
+            get_string('reports_period', st.session_state.language),
+            list(period_options.keys())
+        )
         days = period_options[selected_period]
         
         # Fecha de corte
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
         
-        st.info(f"📅 Analizando datos desde {start_date.strftime('%d/%m/%Y')} hasta {end_date.strftime('%d/%m/%Y')}")
+        st.info(
+            get_string('reports_date_range', st.session_state.language,
+                start=start_date.strftime('%d/%m/%Y'),
+                end=end_date.strftime('%d/%m/%Y')
+            )
+        )
     
     with col2:
-        st.markdown("**Opciones de Formato:**")
-        include_charts = st.checkbox("Incluir gráficos", value=True)
-        include_tables = st.checkbox("Incluir tablas detalladas", value=True)
-        include_insights = st.checkbox("Incluir insights automáticos", value=True)
+        st.markdown(f"**{get_string('reports_format_options', st.session_state.language)}**")
+        include_charts = st.checkbox(get_string('reports_include_charts', st.session_state.language), value=True)
+        include_tables = st.checkbox(get_string('reports_include_tables', st.session_state.language), value=True)
+        include_insights = st.checkbox(get_string('reports_include_insights', st.session_state.language), value=True)
     
     # Reportes disponibles
-    st.markdown("### 📊 Reportes Disponibles")
+    st.markdown(f"### {get_string('reports_available', st.session_state.language)}")
     
     # Reporte de Ventas
     with st.container():
-        st.markdown("""
+        st.markdown(f"""
         <div class="report-card">
             <div class="report-type">
-                <h3>💰 Reporte de Ventas</h3>
+                <h3>{get_string('reports_sales_title', st.session_state.language)}</h3>
             </div>
             <div class="report-description">
-                Análisis completo de rendimiento de ventas, tendencias de revenue, productos más vendidos y métricas de conversión.
+                {get_string('reports_sales_description', st.session_state.language)}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -582,7 +608,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">€{kpis['revenue']:,.0f}</div>
-                <div class="metric-label">Revenue Total</div>
+                <div class="metric-label">{get_string('reports_kpi_revenue', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -590,7 +616,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['orders']:,}</div>
-                <div class="metric-label">Pedidos</div>
+                <div class="metric-label">{get_string('reports_kpi_orders', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -598,26 +624,26 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">€{kpis['aov']:.2f}</div>
-                <div class="metric-label">AOV</div>
+                <div class="metric-label">{get_string('orders_metric_avg_value', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        if st.button("📥 Generar Reporte de Ventas", key="sales_report"):
-            with st.spinner("Generando reporte de ventas..."):
+        if st.button(get_string('reports_sales_generate', st.session_state.language), key="sales_report"):
+            with st.spinner(get_string('reports_sales_generating', st.session_state.language)):
                 pdf_bytes = generate_sales_report(data, start_date, end_date)
-                download_link = create_download_link(pdf_bytes, "reporte_ventas.pdf", "📥 Descargar Reporte de Ventas")
+                download_link = create_download_link(pdf_bytes, "reporte_ventas.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_sales_title', st.session_state.language)))
                 st.markdown(download_link, unsafe_allow_html=True)
-                st.success("✅ Reporte de ventas generado exitosamente!")
+                st.success(get_string('reports_sales_success', st.session_state.language))
     
     # Reporte de Clientes
     with st.container():
-        st.markdown("""
+        st.markdown(f"""
         <div class="report-card">
             <div class="report-type">
-                <h3>👥 Reporte de Clientes</h3>
+                <h3>{get_string('reports_customers_title', st.session_state.language)}</h3>
             </div>
             <div class="report-description">
-                Análisis detallado de la base de clientes, segmentación, CLV, retención y oportunidades de crecimiento.
+                {get_string('reports_customers_description', st.session_state.language)}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -628,7 +654,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['customers']:,}</div>
-                <div class="metric-label">Total Clientes</div>
+                <div class="metric-label">{get_string('customers_metric_total', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -636,7 +662,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['active_customers']:,}</div>
-                <div class="metric-label">Clientes Activos</div>
+                <div class="metric-label">{get_string('customers_metric_active', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -644,26 +670,26 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">€{kpis['clv']:.2f}</div>
-                <div class="metric-label">CLV Promedio</div>
+                <div class="metric-label">{get_string('customers_metric_avg_clv', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        if st.button("📥 Generar Reporte de Clientes", key="customer_report"):
-            with st.spinner("Generando reporte de clientes..."):
+        if st.button(get_string('reports_customers_generate', st.session_state.language), key="customer_report"):
+            with st.spinner(get_string('reports_customers_generating', st.session_state.language)):
                 pdf_bytes = generate_customer_report(data, start_date, end_date)
-                download_link = create_download_link(pdf_bytes, "reporte_clientes.pdf", "📥 Descargar Reporte de Clientes")
+                download_link = create_download_link(pdf_bytes, "reporte_clientes.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_customers_title', st.session_state.language)))
                 st.markdown(download_link, unsafe_allow_html=True)
-                st.success("✅ Reporte de clientes generado exitosamente!")
+                st.success(get_string('reports_customers_success', st.session_state.language))
     
     # Reporte de Productos
     with st.container():
-        st.markdown("""
+        st.markdown(f"""
         <div class="report-card">
             <div class="report-type">
-                <h3>📦 Reporte de Productos</h3>
+                <h3>{get_string('reports_products_title', st.session_state.language)}</h3>
             </div>
             <div class="report-description">
-                Análisis de rendimiento de productos, inventario, categorías más rentables y recomendaciones de stock.
+                {get_string('reports_products_description', st.session_state.language)}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -676,17 +702,16 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{len(products_df):,}</div>
-                <div class="metric-label">Total Productos</div>
+                <div class="metric-label">{get_string('reports_products_metric_total', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
-            # Usar 'active' en lugar de 'status' para productos
             active_products = len(products_df[products_df['active'] == True])
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{active_products:,}</div>
-                <div class="metric-label">Productos Activos</div>
+                <div class="metric-label">{get_string('reports_products_metric_active', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -695,26 +720,26 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">€{avg_price:.2f}</div>
-                <div class="metric-label">Precio Promedio</div>
+                <div class="metric-label">{get_string('reports_products_metric_avg_price', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        if st.button("📥 Generar Reporte de Productos", key="product_report"):
-            with st.spinner("Generando reporte de productos..."):
+        if st.button(get_string('reports_products_generate', st.session_state.language), key="product_report"):
+            with st.spinner(get_string('reports_products_generating', st.session_state.language)):
                 pdf_bytes = generate_product_report(data, start_date, end_date)
-                download_link = create_download_link(pdf_bytes, "reporte_productos.pdf", "📥 Descargar Reporte de Productos")
+                download_link = create_download_link(pdf_bytes, "reporte_productos.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_products_title', st.session_state.language)))
                 st.markdown(download_link, unsafe_allow_html=True)
-                st.success("✅ Reporte de productos generado exitosamente!")
+                st.success(get_string('reports_products_success', st.session_state.language))
     
     # Reporte de Chatbot
     with st.container():
-        st.markdown("""
+        st.markdown(f"""
         <div class="report-card">
             <div class="report-type">
-                <h3>🤖 Reporte de Efectividad del Chatbot</h3>
+                <h3>{get_string('reports_chatbot_title', st.session_state.language)}</h3>
             </div>
             <div class="report-description">
-                Análisis de rendimiento del chatbot, intents más utilizados, tasa de resolución y satisfacción del cliente.
+                {get_string('reports_chatbot_description', st.session_state.language)}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -725,7 +750,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['conversations']:,}</div>
-                <div class="metric-label">Conversaciones</div>
+                <div class="metric-label">{get_string('reports_chatbot_metric_conversations', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -733,7 +758,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['resolution_rate']:.1f}%</div>
-                <div class="metric-label">Tasa Resolución</div>
+                <div class="metric-label">{get_string('reports_chatbot_metric_resolution', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -742,26 +767,26 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{avg_satisfaction:.1f}/5</div>
-                <div class="metric-label">Satisfacción</div>
+                <div class="metric-label">{get_string('reports_chatbot_metric_satisfaction', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        if st.button("📥 Generar Reporte de Chatbot", key="chatbot_report"):
-            with st.spinner("Generando reporte de chatbot..."):
+        if st.button(get_string('reports_chatbot_generate', st.session_state.language), key="chatbot_report"):
+            with st.spinner(get_string('reports_chatbot_generating', st.session_state.language)):
                 pdf_bytes = generate_chatbot_report(data, start_date, end_date)
-                download_link = create_download_link(pdf_bytes, "reporte_chatbot.pdf", "📥 Descargar Reporte de Chatbot")
+                download_link = create_download_link(pdf_bytes, "reporte_chatbot.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_chatbot_title', st.session_state.language)))
                 st.markdown(download_link, unsafe_allow_html=True)
-                st.success("✅ Reporte de chatbot generado exitosamente!")
+                st.success(get_string('reports_chatbot_success', st.session_state.language))
     
     # Reporte de Carritos Abandonados
     with st.container():
-        st.markdown("""
+        st.markdown(f"""
         <div class="report-card">
             <div class="report-type">
-                <h3>🛒 Reporte de Carritos Abandonados</h3>
+                <h3>{get_string('reports_carts_title', st.session_state.language)}</h3>
             </div>
             <div class="report-description">
-                Análisis de carritos abandonados, valor perdido, razones de abandono y estrategias de recuperación.
+                {get_string('reports_carts_description', st.session_state.language)}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -772,7 +797,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{kpis['abandoned_carts']:,}</div>
-                <div class="metric-label">Carritos Abandonados</div>
+                <div class="metric-label">{get_string('reports_carts_metric_abandoned', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -780,7 +805,7 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">€{kpis['abandoned_value']:,.0f}</div>
-                <div class="metric-label">Valor Perdido</div>
+                <div class="metric-label">{get_string('reports_carts_metric_lost_value', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -790,30 +815,29 @@ def main():
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-value">{abandonment_rate:.1f}%</div>
-                <div class="metric-label">Tasa Abandono</div>
+                <div class="metric-label">{get_string('reports_carts_metric_rate', st.session_state.language)}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        if st.button("📥 Generar Reporte de Carritos Abandonados", key="carts_report"):
-            with st.spinner("Generando reporte de carritos abandonados..."):
+        if st.button(get_string('reports_carts_generate', st.session_state.language), key="carts_report"):
+            with st.spinner(get_string('reports_carts_generating', st.session_state.language)):
                 pdf_bytes = generate_abandoned_carts_report(data, start_date, end_date)
-                download_link = create_download_link(pdf_bytes, "reporte_carritos_abandonados.pdf", "📥 Descargar Reporte de Carritos")
+                download_link = create_download_link(pdf_bytes, "reporte_carritos_abandonados.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_carts_title', st.session_state.language)))
                 st.markdown(download_link, unsafe_allow_html=True)
-                st.success("✅ Reporte de carritos abandonados generado exitosamente!")
+                st.success(get_string('reports_carts_success', st.session_state.language))
     
     st.markdown("---")
     
     # Reporte ejecutivo completo
-    st.markdown("### 📊 Reporte Ejecutivo Completo")
+    st.markdown(f"### {get_string('reports_executive_title', st.session_state.language)}")
     
-    st.markdown("""
+    st.markdown(f"""
     <div class="report-card">
         <div class="report-type">
-            <h3>📈 Reporte Ejecutivo Integral</h3>
+            <h3>{get_string('reports_executive_title', st.session_state.language)}</h3>
         </div>
         <div class="report-description">
-            Reporte completo que incluye todos los análisis: ventas, clientes, productos, chatbot y carritos abandonados. 
-            Ideal para presentaciones ejecutivas y toma de decisiones estratégicas.
+            {get_string('reports_executive_description', st.session_state.language)}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -821,60 +845,37 @@ def main():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("**Este reporte incluye:**")
-        st.markdown("""
-        - 📊 Dashboard ejecutivo con KPIs principales
-        - 💰 Análisis detallado de ventas y revenue
-        - 👥 Segmentación y análisis de clientes
-        - 📦 Rendimiento de productos y categorías
-        - 🤖 Efectividad del chatbot y conversaciones
-        - 🛒 Análisis de carritos abandonados
-        - 📈 Tendencias y proyecciones
-        - 💡 Insights y recomendaciones estratégicas
-        """)
+        st.markdown(f"**{get_string('reports_executive_includes', st.session_state.language)}**")
+        st.markdown(get_string('reports_executive_includes_list', st.session_state.language))
     
     with col2:
-        st.markdown("**Métricas incluidas:**")
+        st.markdown(f"**{get_string('reports_executive_metrics', st.session_state.language)}**")
         st.markdown(f"""
-        - Revenue: €{kpis['revenue']:,.0f}
-        - Pedidos: {kpis['orders']:,}
-        - Clientes: {kpis['customers']:,}
-        - Resolución: {kpis['resolution_rate']:.1f}%
-        - Valor perdido: €{kpis['abandoned_value']:,.0f}
+        - {get_string('reports_kpi_revenue', st.session_state.language)}: €{kpis['revenue']:,.0f}
+        - {get_string('reports_kpi_orders', st.session_state.language)}: {kpis['orders']:,}
+        - {get_string('reports_kpi_active_customers', st.session_state.language)}: {kpis['customers']:,}
+        - {get_string('reports_kpi_resolution_rate', st.session_state.language)}: {kpis['resolution_rate']:.1f}%
+        - {get_string('reports_kpi_abandoned_value', st.session_state.language)}: €{kpis['abandoned_value']:,.0f}
         """)
     
-    if st.button("📥 Generar Reporte Ejecutivo Completo", key="executive_report", type="primary"):
-        with st.spinner("Generando reporte ejecutivo completo... Esto puede tomar unos momentos."):
-            # Generar todos los reportes y combinarlos (simplificado para el ejemplo)
-            pdf_bytes = generate_sales_report(data, start_date, end_date)  # En una implementación real, sería un reporte combinado
-            download_link = create_download_link(pdf_bytes, "reporte_ejecutivo_completo.pdf", "📥 Descargar Reporte Ejecutivo Completo")
+    if st.button(get_string('reports_executive_generate', st.session_state.language), key="executive_report", type="primary"):
+        with st.spinner(get_string('reports_executive_generating', st.session_state.language)):
+            pdf_bytes = generate_sales_report(data, start_date, end_date)
+            download_link = create_download_link(pdf_bytes, "reporte_ejecutivo_completo.pdf", get_string('reports_download', st.session_state.language, name=get_string('reports_executive_title', st.session_state.language)))
             st.markdown(download_link, unsafe_allow_html=True)
-            st.success("✅ Reporte ejecutivo completo generado exitosamente!")
+            st.success(get_string('reports_executive_success', st.session_state.language))
             
-            # Mostrar resumen de lo generado
-            st.info("""
-            📋 **Reporte generado con éxito:**
-            - ✅ Análisis de ventas y revenue
-            - ✅ Segmentación de clientes
-            - ✅ Rendimiento de productos
-            - ✅ Efectividad del chatbot
-            - ✅ Análisis de carritos abandonados
-            - ✅ Insights y recomendaciones
+            st.info(f"""
+            {get_string('reports_executive_summary_generated', st.session_state.language)}
+            {get_string('reports_executive_summary_items', st.session_state.language)}
             """)
     
     st.markdown("---")
     
     # Programación de reportes
-    st.markdown("### ⏰ Programación de Reportes")
+    st.markdown(f"### {get_string('reports_scheduling', st.session_state.language)}")
     
-    st.info("""
-    **🚀 Funcionalidad Futura:** 
-    En la versión completa, podrás programar la generación automática de reportes:
-    - 📅 Reportes diarios, semanales o mensuales
-    - 📧 Envío automático por email
-    - 🔔 Notificaciones de alertas personalizadas
-    - 📊 Dashboards en tiempo real
-    """)
+    st.info(get_string('reports_scheduling_future', st.session_state.language))
 
 if __name__ == "__main__":
     main()
