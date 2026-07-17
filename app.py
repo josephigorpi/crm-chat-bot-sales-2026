@@ -162,12 +162,12 @@ def dashboard_page():
         
         with col1:
             # Gráfico de ventas en el tiempo
-            sales_chart = create_sales_timeline(data['orders'], chart_template)
+            sales_chart = create_sales_timeline(data['orders'], chart_template, st.session_state.language)
             st.plotly_chart(sales_chart, use_container_width=True)
         
         with col2:
             # Gráfico de estados de pedidos
-            status_chart = create_order_status_donut(data['orders'], chart_template)
+            status_chart = create_order_status_donut(data['orders'], chart_template, st.session_state.language)
             st.plotly_chart(status_chart, use_container_width=True)
         
         # Segunda fila de gráficos
@@ -175,12 +175,12 @@ def dashboard_page():
         
         with col1:
             # Mensajes por hora
-            messages_chart = create_messages_by_hour(data['conversations'], chart_template)
+            messages_chart = create_messages_by_hour(data['conversations'], chart_template, st.session_state.language)
             st.plotly_chart(messages_chart, use_container_width=True)
         
         with col2:
             # Distribución de intenciones
-            intent_chart = create_intent_distribution(data['conversations'], chart_template)
+            intent_chart = create_intent_distribution(data['conversations'], chart_template, st.session_state.language)
             st.plotly_chart(intent_chart, use_container_width=True)
         
         st.markdown("---")
