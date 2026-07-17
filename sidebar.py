@@ -69,21 +69,21 @@ def sidebar_navigation():
         st.markdown(f"### {get_string('sidebar_theme', st.session_state.language)}")
         
         col1, col2 = st.columns([3, 1])
-        with col1:
-            pass  # Espacio para alineación
-        with col2:
-            # Botón toggle con ícono dinámico
-            current_theme = get_theme()
-            if current_theme == 'light':
-                icon = "🌙"
-                label = get_string('sidebar_theme_dark', st.session_state.language)
-            else:
-                icon = "☀️"
-                label = get_string('sidebar_theme_light', st.session_state.language)
-            
-            if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle"):
-                toggle_theme()
-                st.rerun()
+        #with col1:
+        #    pass  # Espacio para alineación
+        #with col2:
+        # Botón toggle con ícono dinámico
+        current_theme = get_theme()
+        if current_theme == 'light':
+            icon = "🌙"
+            label = get_string('sidebar_theme_dark', st.session_state.language)
+        else:
+            icon = "☀️"
+            label = get_string('sidebar_theme_light', st.session_state.language)
+        
+        if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle"):
+            toggle_theme()
+            st.rerun()
         
         st.markdown("---")
         
