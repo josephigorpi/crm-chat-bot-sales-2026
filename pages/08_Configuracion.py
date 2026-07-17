@@ -7,6 +7,8 @@ import streamlit as st
 import pandas as pd
 import json
 from datetime import datetime, timedelta
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Configuración", page_icon="⚙️", layout="wide")
 
@@ -23,6 +25,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 
 
@@ -290,10 +293,10 @@ def main():
     initialize_session_state()
     
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="config-header">
-        <h1>⚙️ Configuración del Sistema</h1>
-        <p>Personaliza y administra tu dashboard de ventas con IA</p>
+        <h1>{get_string('config_title', st.session_state.language)}</h1>
+        <p>{get_string('config_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
