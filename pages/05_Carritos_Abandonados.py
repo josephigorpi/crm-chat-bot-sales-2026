@@ -23,6 +23,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sidebar import sidebar_navigation
 
+# Inicializar estado de tema e idioma
+init_theme_state()
+if 'language' not in st.session_state:
+    st.session_state.language = 'es'
+
 # Verificar autenticación
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     switch_page("app")
@@ -109,7 +114,7 @@ def load_cart_data():
             st.session_state.app_data = get_all_data()
         return st.session_state.app_data
     except Exception as e:
-        st.error(f"Error al cargar datos: {str(e)}")
+        st.error(f"{get_string('carts_load_error', st.session_state.language)} {str(e)}")
         return None
 
 def calculate_abandonment_metrics(carts_df, customers_df, products_df):
@@ -134,24 +139,24 @@ def calculate_abandonment_metrics(carts_df, customers_df, products_df):
     # Categorizar por valor
     def categorize_cart_value(value):
         if value >= 200:
-            return 'Alto Valor'
+            return get_string('carts_filter_value_high', st.session_state.language)
         elif value >= 100:
-            return 'Valor Medio'
+            return get_string('carts_filter_value_medium', st.session_state.language)
         else:
-            return 'Bajo Valor'
+            return get_string('carts_filter_value_low', st.session_state.language)
     
     enriched_carts['value_category'] = enriched_carts['total_value'].apply(categorize_cart_value)
     
     # Categorizar por tiempo de abandono
     def categorize_abandonment_time(hours):
         if hours <= 1:
-            return 'Reciente (< 1h)'
+            return get_string('carts_filter_time_recent', st.session_state.language)
         elif hours <= 24:
-            return 'Mismo día (< 24h)'
+            return get_string('carts_filter_time_same_day', st.session_state.language)
         elif hours <= 72:
-            return 'Últimos 3 días'
+            return get_string('carts_filter_time_last_3days', st.session_state.language)
         else:
-            return 'Más de 3 días'
+            return get_string('carts_filter_time_older', st.session_state.language)
     
     enriched_carts['time_category'] = enriched_carts['hours_since_abandonment'].apply(categorize_abandonment_time)
     
@@ -163,17 +168,17 @@ def calculate_abandonment_metrics(carts_df, customers_df, products_df):
         base_prob = 0.3
         
         # Ajustar por valor del carrito
-        if row['value_category'] == 'Alto Valor':
+        if row['value_category'] == get_string('carts_filter_value_high', st.session_state.language):
             base_prob += 0.2
-        elif row['value_category'] == 'Valor Medio':
+        elif row['value_category'] == get_string('carts_filter_value_medium', st.session_state.language):
             base_prob += 0.1
         
         # Ajustar por tiempo de abandono
-        if row['time_category'] == 'Reciente (< 1h)':
+        if row['time_category'] == get_string('carts_filter_time_recent', st.session_state.language):
             base_prob += 0.3
-        elif row['time_category'] == 'Mismo día (< 24h)':
+        elif row['time_category'] == get_string('carts_filter_time_same_day', st.session_state.language):
             base_prob += 0.1
-        elif row['time_category'] == 'Últimos 3 días':
+        elif row['time_category'] == get_string('carts_filter_time_last_3days', st.session_state.language):
             base_prob -= 0.1
         else:
             base_prob -= 0.2
@@ -257,11 +262,11 @@ def create_abandonment_funnel(carts_df):
     """Crea embudo de abandono de carritos"""
     # Simular datos del embudo
     funnel_data = {
-        'Visitantes': 50000,
-        'Productos Vistos': 25000,
-        'Añadido al Carrito': len(carts_df) + 5000,  # Incluir carritos completados
-        'Carritos Abandonados': len(carts_df),
-        'Recuperaciones': int(len(carts_df) * 0.15)  # 15% de recuperación
+        get_string('carts_funnel_visitors', st.session_state.language): 50000,
+        get_string('carts_funnel_products_viewed', st.session_state.language): 25000,
+        get_string('carts_funnel_added_to_cart', st.session_state.language): len(carts_df) + 5000,
+        get_string('carts_funnel_abandoned', st.session_state.language): len(carts_df),
+        get_string('carts_funnel_recovered', st.session_state.language): int(len(carts_df) * 0.15)
     }
     
     stages = list(funnel_data.keys())
@@ -277,7 +282,7 @@ def create_abandonment_funnel(carts_df):
     ))
     
     fig.update_layout(
-        title="Embudo de Abandono de Carritos",
+        title=get_string('carts_funnel', st.session_state.language),
         template="plotly_white",
         height=400
     )
@@ -288,18 +293,18 @@ def create_abandonment_reasons_chart():
     """Crea gráfico de razones de abandono"""
     # Datos simulados de razones de abandono
     reasons_data = {
-        'Costos de envío altos': 35,
-        'Proceso de checkout complejo': 25,
-        'Falta de métodos de pago': 15,
-        'Precios altos': 12,
-        'Problemas técnicos': 8,
-        'Falta de confianza': 5
+        get_string('carts_reasons_shipping', st.session_state.language): 35,
+        get_string('carts_reasons_checkout', st.session_state.language): 25,
+        get_string('carts_reasons_payment', st.session_state.language): 15,
+        get_string('carts_reasons_price', st.session_state.language): 12,
+        get_string('carts_reasons_technical', st.session_state.language): 8,
+        get_string('carts_reasons_trust', st.session_state.language): 5
     }
     
     fig = px.pie(
         values=list(reasons_data.values()),
         names=list(reasons_data.keys()),
-        title="Principales Razones de Abandono",
+        title=get_string('carts_reasons', st.session_state.language),
         color_discrete_sequence=px.colors.qualitative.Set3
     )
     
@@ -327,19 +332,19 @@ def create_recovery_timeline():
     fig = px.line(
         x=hours,
         y=recovery_rates,
-        title="Tasa de Recuperación por Tiempo Transcurrido",
+        title=get_string('carts_recovery_timeline', st.session_state.language),
         markers=True
     )
     
     fig.update_traces(
         line_color='#10b981',
         marker_color='#10b981',
-        hovertemplate='<b>Horas: %{x}</b><br>Tasa de Recuperación: %{y}%<extra></extra>'
+        hovertemplate='<b>' + get_string('carts_recovery_timeline_hover', st.session_state.language) + '</b><br>' + get_string('carts_recovery_timeline_value', st.session_state.language) + '<extra></extra>'
     )
     
     fig.update_layout(
-        xaxis_title="Horas desde Abandono",
-        yaxis_title="Tasa de Recuperación (%)",
+        xaxis_title=get_string('carts_recovery_timeline_hours', st.session_state.language),
+        yaxis_title=get_string('carts_recovery_timeline_rate', st.session_state.language),
         template="plotly_white",
         height=400
     )
@@ -351,34 +356,34 @@ def display_recovery_strategies(cart_row):
     strategies = []
     
     # Estrategias basadas en valor del carrito
-    if cart_row['value_category'] == 'Alto Valor':
+    if cart_row['value_category'] == get_string('carts_filter_value_high', st.session_state.language):
         strategies.extend([
-            "🎯 Llamada telefónica personalizada",
-            "💰 Descuento del 15-20%",
-            "🚚 Envío gratuito premium"
+            get_string('carts_strategy_call', st.session_state.language),
+            get_string('carts_strategy_discount_20', st.session_state.language),
+            get_string('carts_strategy_free_shipping_premium', st.session_state.language)
         ])
-    elif cart_row['value_category'] == 'Valor Medio':
+    elif cart_row['value_category'] == get_string('carts_filter_value_medium', st.session_state.language):
         strategies.extend([
-            "📧 Email personalizado con descuento del 10%",
-            "🚚 Envío gratuito",
-            "⏰ Recordatorio de stock limitado"
+            get_string('carts_strategy_discount_10', st.session_state.language),
+            get_string('carts_strategy_free_shipping', st.session_state.language),
+            get_string('carts_strategy_stock_alert', st.session_state.language)
         ])
     else:
         strategies.extend([
-            "📧 Email recordatorio simple",
-            "💰 Descuento del 5%",
-            "🎁 Regalo con compra"
+            get_string('carts_strategy_simple_email', st.session_state.language),
+            get_string('carts_strategy_discount_5', st.session_state.language),
+            get_string('carts_strategy_free_gift', st.session_state.language)
         ])
     
     # Estrategias basadas en tiempo
-    if cart_row['time_category'] == 'Reciente (< 1h)':
-        strategies.append("⚡ Notificación push inmediata")
-    elif cart_row['time_category'] == 'Mismo día (< 24h)':
-        strategies.append("📱 SMS recordatorio")
-    elif cart_row['time_category'] == 'Últimos 3 días':
-        strategies.append("🔄 Campaña de retargeting")
+    if cart_row['time_category'] == get_string('carts_filter_time_recent', st.session_state.language):
+        strategies.append(get_string('carts_strategy_push_notification', st.session_state.language))
+    elif cart_row['time_category'] == get_string('carts_filter_time_same_day', st.session_state.language):
+        strategies.append(get_string('carts_strategy_sms', st.session_state.language))
+    elif cart_row['time_category'] == get_string('carts_filter_time_last_3days', st.session_state.language):
+        strategies.append(get_string('carts_strategy_retargeting', st.session_state.language))
     else:
-        strategies.append("💌 Email de reactivación especial")
+        strategies.append(get_string('carts_strategy_reactivation', st.session_state.language))
     
     return strategies
 
@@ -418,7 +423,7 @@ def main():
     # Botón para generar carrito de prueba
     col1, col2 = st.columns([1, 3])
     with col1:
-        if st.button("🧪 Generar Carrito de Prueba", type="primary"):
+        if st.button(get_string('carts_generate_test', st.session_state.language), type="primary"):
             test_cart = generate_test_abandoned_cart(customers_df, products_df)
             # Convertir el dict a una fila del DataFrame
             new_cart_row = pd.DataFrame([test_cart])
@@ -427,7 +432,7 @@ def main():
                 [carts_df, new_cart_row],
                 ignore_index=True
             )
-            st.success(f"✅ Carrito de prueba generado: {test_cart['id']}")
+            st.success(get_string('carts_generate_success', st.session_state.language, id=test_cart['id']))
             st.rerun()
     
     with col2:
@@ -435,89 +440,104 @@ def main():
         sent_reminders = check_and_send_reminders()
         if sent_reminders:
             for reminder in sent_reminders:
-                st.toast(f"📨 Recordatorio enviado a {reminder['cliente']}!")
+                st.toast(get_string('carts_reminder_sent', st.session_state.language, name=reminder['cliente']))
     
     # Calcular métricas de abandono
     enriched_carts = calculate_abandonment_metrics(carts_df, customers_df, products_df)
     
     # Filtros
-    st.markdown("### 🔍 Filtros de Carritos Abandonados")
+    st.markdown(f"### {get_string('carts_filters', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        value_categories = ['Todos'] + list(enriched_carts['value_category'].unique())
-        selected_value = st.selectbox("Valor del Carrito", value_categories)
+        value_categories = [get_string('carts_filter_value_all', st.session_state.language)] + list(enriched_carts['value_category'].unique())
+        selected_value = st.selectbox(
+            get_string('carts_filter_value', st.session_state.language),
+            value_categories
+        )
     
     with col2:
-        time_categories = ['Todos'] + list(enriched_carts['time_category'].unique())
-        selected_time = st.selectbox("Tiempo de Abandono", time_categories)
+        time_categories = [get_string('carts_filter_time_all', st.session_state.language)] + list(enriched_carts['time_category'].unique())
+        selected_time = st.selectbox(
+            get_string('carts_filter_time', st.session_state.language),
+            time_categories
+        )
     
     with col3:
-        countries = ['Todos'] + list(enriched_carts['country'].unique())
-        selected_country = st.selectbox("País", countries)
+        countries = [get_string('carts_filter_country_all', st.session_state.language)] + list(enriched_carts['country'].unique())
+        selected_country = st.selectbox(
+            get_string('carts_filter_country', st.session_state.language),
+            countries
+        )
     
     with col4:
-        min_probability = st.slider("Probabilidad Mínima de Recuperación", 0.0, 1.0, 0.0, 0.05)
+        min_probability = st.slider(
+            get_string('carts_filter_probability', st.session_state.language),
+            0.0, 1.0, 0.0, 0.05
+        )
     
     # Aplicar filtros
     filtered_carts = enriched_carts.copy()
     
-    if selected_value != 'Todos':
+    if selected_value != get_string('carts_filter_value_all', st.session_state.language):
         filtered_carts = filtered_carts[filtered_carts['value_category'] == selected_value]
     
-    if selected_time != 'Todos':
+    if selected_time != get_string('carts_filter_time_all', st.session_state.language):
         filtered_carts = filtered_carts[filtered_carts['time_category'] == selected_time]
     
-    if selected_country != 'Todos':
+    if selected_country != get_string('carts_filter_country_all', st.session_state.language):
         filtered_carts = filtered_carts[filtered_carts['country'] == selected_country]
     
     filtered_carts = filtered_carts[filtered_carts['recovery_probability'] >= min_probability]
     
     # Métricas principales
-    st.markdown("### 📊 Métricas de Abandono")
+    st.markdown(f"### {get_string('carts_metrics', st.session_state.language)}")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>{:,}</h3>
-            <p>Carritos Abandonados</p>
+            <h3>{len(filtered_carts):,}</h3>
+            <p>{get_string('carts_metric_total', st.session_state.language)}</p>
         </div>
-        """.format(len(filtered_carts)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
         total_value = filtered_carts['total_value'].sum()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>€{:,.2f}</h3>
-            <p>Valor Total Perdido</p>
+            <h3>€{total_value:,.2f}</h3>
+            <p>{get_string('carts_metric_lost_value', st.session_state.language)}</p>
         </div>
-        """.format(total_value), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         avg_recovery_prob = filtered_carts['recovery_probability'].mean()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>{:.1f}%</h3>
-            <p>Prob. Recuperación Promedio</p>
+            <h3>{avg_recovery_prob * 100:.1f}%</h3>
+            <p>{get_string('carts_metric_avg_recovery', st.session_state.language)}</p>
         </div>
-        """.format(avg_recovery_prob * 100), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
         potential_recovery = (filtered_carts['total_value'] * filtered_carts['recovery_probability']).sum()
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-box">
-            <h3>€{:,.2f}</h3>
-            <p>Recuperación Potencial</p>
+            <h3>€{potential_recovery:,.2f}</h3>
+            <p>{get_string('carts_metric_potential_recovery', st.session_state.language)}</p>
         </div>
-        """.format(potential_recovery), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Visualizaciones principales
-    st.markdown("### 📈 Análisis de Abandono")
+    st.markdown(f"### {get_string('carts_analysis', st.session_state.language)}")
+    
+    # Obtener el template de plotly
+    chart_template = get_plotly_template()
     
     col1, col2 = st.columns(2)
     
@@ -545,19 +565,19 @@ def main():
         fig = px.bar(
             x=value_dist.index,
             y=value_dist.values,
-            title="Distribución por Valor de Carrito",
+            title=get_string('carts_distribution', st.session_state.language),
             color=value_dist.values,
             color_continuous_scale='Reds'
         )
         
         fig.update_traces(
-            hovertemplate='<b>%{x}</b><br>Carritos: %{y}<extra></extra>'
+            hovertemplate='<b>%{x}</b><br>' + get_string('carts_distribution_y', st.session_state.language) + ': %{y}<extra></extra>'
         )
         
         fig.update_layout(
-            xaxis_title="Categoría de Valor",
-            yaxis_title="Número de Carritos",
-            template="plotly_white",
+            xaxis_title=get_string('carts_distribution_x', st.session_state.language),
+            yaxis_title=get_string('carts_distribution_y', st.session_state.language),
+            template=chart_template,
             height=400,
             coloraxis_showscale=False
         )
@@ -567,7 +587,7 @@ def main():
     st.markdown("---")
     
     # Análisis por tiempo de abandono
-    st.markdown("### ⏰ Análisis Temporal")
+    st.markdown(f"### {get_string('carts_temporal_analysis', st.session_state.language)}")
     
     time_analysis = filtered_carts.groupby('time_category').agg({
         'id': 'count',
@@ -581,30 +601,30 @@ def main():
     fig = go.Figure()
     
     fig.add_trace(go.Bar(
-        name='Número de Carritos',
+        name=get_string('carts_temporal_count', st.session_state.language),
         x=time_analysis['time_category'],
         y=time_analysis['count'],
         marker_color='#f59e0b',
         yaxis='y',
-        hovertemplate='<b>%{x}</b><br>Carritos: %{y}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('carts_temporal_count', st.session_state.language) + ': %{y}<extra></extra>'
     ))
     
     fig.add_trace(go.Scatter(
-        name='Prob. Recuperación (%)',
+        name=get_string('carts_temporal_probability', st.session_state.language),
         x=time_analysis['time_category'],
         y=time_analysis['avg_recovery_prob'] * 100,
         mode='lines+markers',
         line=dict(color='#10b981'),
         yaxis='y2',
-        hovertemplate='<b>%{x}</b><br>Probabilidad: %{y:.1f}%<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('carts_temporal_probability', st.session_state.language) + ': %{y:.1f}%<extra></extra>'
     ))
     
     fig.update_layout(
-        title='Carritos Abandonados y Probabilidad de Recuperación por Tiempo',
-        xaxis_title='Tiempo desde Abandono',
-        yaxis=dict(title='Número de Carritos', side='left'),
-        yaxis2=dict(title='Probabilidad de Recuperación (%)', side='right', overlaying='y'),
-        template='plotly_white',
+        title=get_string('carts_temporal_title', st.session_state.language),
+        xaxis_title=get_string('carts_filter_time', st.session_state.language),
+        yaxis=dict(title=get_string('carts_temporal_count', st.session_state.language), side='left'),
+        yaxis2=dict(title=get_string('carts_temporal_probability', st.session_state.language), side='right', overlaying='y'),
+        template=chart_template,
         height=400,
         hovermode='x unified'
     )
@@ -614,7 +634,7 @@ def main():
     st.markdown("---")
     
     # Log de recordatorios enviados
-    st.markdown("### 📨 Historial de Recordatorios Enviados")
+    st.markdown(f"### {get_string('carts_reminder_history', st.session_state.language)}")
     if st.session_state.sent_reminders:
         for reminder in reversed(st.session_state.sent_reminders):
             st.markdown(f"""
@@ -623,11 +643,11 @@ def main():
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("No se han enviado recordatorios aún.")
+        st.info(get_string('carts_reminder_none', st.session_state.language))
     st.markdown("---")
     
     # Carritos prioritarios para recuperación
-    st.markdown("### 🎯 Carritos Prioritarios para Recuperación")
+    st.markdown(f"### {get_string('carts_priority', st.session_state.language)}")
     
     # Ordenar por probabilidad de recuperación y valor
     priority_carts = filtered_carts.copy()
@@ -639,33 +659,41 @@ def main():
     
     for _, cart in priority_carts.iterrows():
         # Check if reminder was already sent from DataFrame
-        reminder_sent = cart['recordatorio_enviado']
+        reminder_sent = cart.get('recordatorio_enviado', False)
+        reminder_status = get_string('carts_priority_reminder_sent', st.session_state.language) if reminder_sent else ''
         
         # Determinar clase CSS basada en valor
-        if cart['value_category'] == 'Alto Valor':
+        if cart['value_category'] == get_string('carts_filter_value_high', st.session_state.language):
             card_class = 'high-value-cart'
-        elif cart['value_category'] == 'Valor Medio':
+        elif cart['value_category'] == get_string('carts_filter_value_medium', st.session_state.language):
             card_class = 'medium-value-cart'
         else:
             card_class = 'low-value-cart'
         
-        with st.expander(f"🛒 Carrito #{cart['id']} - {cart['first_name']} {cart['last_name']} - €{cart['total_value']:.2f} - {'📨 Recordatorio Enviado' if reminder_sent else ''}"):
+        expander_label = get_string('carts_priority_expander', st.session_state.language,
+            id=cart['id'],
+            name=f"{cart['first_name']} {cart['last_name']}",
+            value=cart['total_value'],
+            reminder_status=reminder_status
+        )
+        
+        with st.expander(expander_label):
             col1, col2 = st.columns([2, 1])
             
             with col1:
                 st.markdown(f"""
                 <div class="abandoned-cart-card {card_class}">
                     <h4>👤 {cart['first_name']} {cart['last_name']}</h4>
-                    <p><strong>📧 Email:</strong> {cart['email']}</p>
-                    <p><strong>🌍 País:</strong> {cart['country']}</p>
-                    <p><strong>💰 Valor del Carrito:</strong> €{cart['total_value']:.2f}</p>
-                    <p><strong>⏰ Tiempo de Abandono:</strong> {cart['time_category']}</p>
-                    <p><strong>📊 Probabilidad de Recuperación:</strong> {cart['recovery_probability']:.1%}</p>
+                    <p><strong>{get_string('carts_priority_email_label', st.session_state.language)}</strong> {cart['email']}</p>
+                    <p><strong>{get_string('carts_priority_country_label', st.session_state.language)}</strong> {cart['country']}</p>
+                    <p><strong>{get_string('carts_priority_value_label', st.session_state.language)}</strong> €{cart['total_value']:.2f}</p>
+                    <p><strong>{get_string('carts_priority_time_label', st.session_state.language)}</strong> {cart['time_category']}</p>
+                    <p><strong>{get_string('carts_priority_probability_label', st.session_state.language)}</strong> {cart['recovery_probability']:.1%}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # Mostrar productos en el carrito (simulado)
-                st.markdown("**🛍️ Productos en el Carrito:**")
+                st.markdown(f"**{get_string('carts_priority_products', st.session_state.language)}**")
                 import json
                 try:
                     products_in_cart = json.loads(cart['cart_items'])
@@ -677,12 +705,12 @@ def main():
                         """, unsafe_allow_html=True)
                     
                     if len(products_in_cart) > 3:
-                        st.markdown(f"<div class='product-item'>... y {len(products_in_cart) - 3} productos más</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='product-item'>{get_string('carts_priority_products_more', st.session_state.language, count=len(products_in_cart) - 3)}</div>", unsafe_allow_html=True)
                 except:
-                    st.markdown("*Productos no disponibles*")
+                    st.markdown(f"*{get_string('carts_priority_products_unavailable', st.session_state.language)}*")
             
             with col2:
-                st.markdown("**🎯 Estrategias de Recuperación Recomendadas:**")
+                st.markdown(f"**{get_string('carts_priority_strategies', st.session_state.language)}**")
                 strategies = display_recovery_strategies(cart)
                 
                 for strategy in strategies:
@@ -693,90 +721,114 @@ def main():
                     """, unsafe_allow_html=True)
                 
                 # Botones de acción
-                st.markdown("**⚡ Acciones Rápidas:**")
+                st.markdown(f"**{get_string('carts_priority_actions', st.session_state.language)}**")
                 col_a, col_b, col_c = st.columns(3)
                 with col_a:
-                    if st.button(f"📧 Enviar Email", key=f"email_{cart['id']}"):
-                        st.success("Email de recuperación enviado!")
+                    if st.button(get_string('carts_priority_action_email', st.session_state.language), key=f"email_{cart['id']}"):
+                        st.success(get_string('carts_priority_action_email_sent', st.session_state.language))
                 
                 with col_b:
-                    if st.button(f"💰 Crear Descuento", key=f"discount_{cart['id']}"):
-                        st.success("Descuento del 10% creado!")
+                    if st.button(get_string('carts_priority_action_discount', st.session_state.language), key=f"discount_{cart['id']}"):
+                        st.success(get_string('carts_priority_action_discount_created', st.session_state.language))
                 
                 with col_c:
-                    if st.button(f"📨 Enviar Recordatorio", key=f"reminder_{cart['id']}", disabled=reminder_sent):
+                    if st.button(get_string('carts_priority_action_reminder', st.session_state.language), key=f"reminder_{cart['id']}", disabled=reminder_sent):
                         # Add reminder to session state
                         st.session_state.sent_reminders.append({
                             'cart_id': cart['id'],
                             'cliente': f"{cart['first_name']} {cart['last_name']}",
                             'email': cart['email'],
                             'valor': cart['total_value'],
-                            'mensaje': "¿Sigues interesado? Te dejamos 10% de descuento",
+                            'mensaje': get_string('carts_priority_reminder_message', st.session_state.language),
                             'fecha': datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                         })
-                        st.success(f"Recordatorio enviado a {cart['first_name']} {cart['last_name']}!")
+                        st.success(get_string('carts_priority_action_reminder_sent', st.session_state.language, name=f"{cart['first_name']} {cart['last_name']}"))
                         st.rerun()
     
     st.markdown("---")
     
     # Tabla completa de carritos abandonados
-    st.markdown("### 📋 Todos los Carritos Abandonados")
+    st.markdown(f"### {get_string('carts_list', st.session_state.language)}")
     
     # Preparar datos para mostrar
     display_carts = filtered_carts.copy()
-    display_carts['Cliente'] = display_carts['first_name'] + ' ' + display_carts['last_name']
-    display_carts['Email'] = display_carts['email']
-    display_carts['País'] = display_carts['country']
-    display_carts['Valor'] = display_carts['total_value'].apply(lambda x: f"€{x:.2f}")
-    display_carts['Categoría'] = display_carts['value_category']
-    display_carts['Tiempo Abandono'] = display_carts['time_category']
-    display_carts['Prob. Recuperación'] = display_carts['recovery_probability'].apply(lambda x: f"{x:.1%}")
-    display_carts['Fecha Abandono'] = display_carts['created_at'].dt.strftime('%d/%m/%Y %H:%M')
+    display_carts[get_string('carts_table_client', st.session_state.language)] = display_carts['first_name'] + ' ' + display_carts['last_name']
+    display_carts[get_string('carts_table_email', st.session_state.language)] = display_carts['email']
+    display_carts[get_string('carts_table_country', st.session_state.language)] = display_carts['country']
+    display_carts[get_string('carts_table_value', st.session_state.language)] = display_carts['total_value'].apply(lambda x: f"€{x:.2f}")
+    display_carts[get_string('carts_table_category', st.session_state.language)] = display_carts['value_category']
+    display_carts[get_string('carts_table_time', st.session_state.language)] = display_carts['time_category']
+    display_carts[get_string('carts_table_probability', st.session_state.language)] = display_carts['recovery_probability'].apply(lambda x: f"{x:.1%}")
+    display_carts[get_string('carts_table_date', st.session_state.language)] = display_carts['created_at'].dt.strftime('%d/%m/%Y %H:%M')
     
     # Mostrar tabla
     st.dataframe(
-        display_carts[['Cliente', 'Email', 'País', 'Valor', 'Categoría', 'Tiempo Abandono', 'Prob. Recuperación', 'Fecha Abandono']],
+        display_carts[[
+            get_string('carts_table_client', st.session_state.language),
+            get_string('carts_table_email', st.session_state.language),
+            get_string('carts_table_country', st.session_state.language),
+            get_string('carts_table_value', st.session_state.language),
+            get_string('carts_table_category', st.session_state.language),
+            get_string('carts_table_time', st.session_state.language),
+            get_string('carts_table_probability', st.session_state.language),
+            get_string('carts_table_date', st.session_state.language)
+        ]],
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Cliente": st.column_config.TextColumn("Cliente", width="medium"),
-            "Email": st.column_config.TextColumn("Email", width="large"),
-            "País": st.column_config.TextColumn("País", width="small"),
-            "Valor": st.column_config.TextColumn("Valor", width="small"),
-            "Categoría": st.column_config.TextColumn("Categoría", width="medium"),
-            "Tiempo Abandono": st.column_config.TextColumn("Tiempo Abandono", width="medium"),
-            "Prob. Recuperación": st.column_config.TextColumn("Prob. Recuperación", width="small"),
-            "Fecha Abandono": st.column_config.TextColumn("Fecha Abandono", width="medium")
+            get_string('carts_table_client', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_client', st.session_state.language), width="medium"
+            ),
+            get_string('carts_table_email', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_email', st.session_state.language), width="large"
+            ),
+            get_string('carts_table_country', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_country', st.session_state.language), width="small"
+            ),
+            get_string('carts_table_value', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_value', st.session_state.language), width="small"
+            ),
+            get_string('carts_table_category', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_category', st.session_state.language), width="medium"
+            ),
+            get_string('carts_table_time', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_time', st.session_state.language), width="medium"
+            ),
+            get_string('carts_table_probability', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_probability', st.session_state.language), width="small"
+            ),
+            get_string('carts_table_date', st.session_state.language): st.column_config.TextColumn(
+                get_string('carts_table_date', st.session_state.language), width="medium"
+            )
         }
     )
     
     # Resumen y recomendaciones
-    st.markdown("### 💡 Resumen y Recomendaciones")
+    st.markdown(f"### {get_string('carts_insights', st.session_state.language)}")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        high_value_carts = len(filtered_carts[filtered_carts['value_category'] == 'Alto Valor'])
-        recent_carts = len(filtered_carts[filtered_carts['time_category'] == 'Reciente (< 1h)'])
+        high_value_carts = len(filtered_carts[filtered_carts['value_category'] == get_string('carts_filter_value_high', st.session_state.language)])
+        recent_carts = len(filtered_carts[filtered_carts['time_category'] == get_string('carts_filter_time_recent', st.session_state.language)])
         
         st.info(f"""
-        **📊 Oportunidades Inmediatas:**
-        - {high_value_carts} carritos de alto valor para recuperar
-        - {recent_carts} carritos abandonados recientemente
-        - €{potential_recovery:.2f} en recuperación potencial
-        - Tasa de abandono actual: {(len(enriched_carts) / (len(enriched_carts) + 5000)) * 100:.1f}%
+        **{get_string('carts_insights_opportunities', st.session_state.language)}**
+        - {get_string('carts_insights_high_value', st.session_state.language, count=high_value_carts)}
+        - {get_string('carts_insights_recent', st.session_state.language, count=recent_carts)}
+        - {get_string('carts_insights_potential', st.session_state.language, value=potential_recovery)}
+        - {get_string('carts_insights_abandonment_rate', st.session_state.language, rate=(len(enriched_carts) / (len(enriched_carts) + 5000)) * 100)}
         """)
     
     with col2:
         avg_cart_value = filtered_carts['total_value'].mean()
-        top_recovery_prob = filtered_carts['recovery_probability'].max()
         
         st.success(f"""
-        **🎯 Estrategias Recomendadas:**
-        - Implementar emails automáticos en la primera hora
-        - Ofrecer descuentos progresivos según el tiempo
-        - Simplificar el proceso de checkout
-        - Valor promedio de carrito: €{avg_cart_value:.2f}
+        **{get_string('carts_insights_strategies', st.session_state.language)}**
+        - {get_string('carts_insights_strategy_auto_emails', st.session_state.language)}
+        - {get_string('carts_insights_strategy_discounts', st.session_state.language)}
+        - {get_string('carts_insights_strategy_checkout', st.session_state.language)}
+        - {get_string('carts_insights_avg_value', st.session_state.language, value=avg_cart_value)}
         """)
 
 if __name__ == "__main__":
