@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from utils.data_generator import get_all_data, generate_test_abandoned_cart
 import time
 import json
+from utils.theme import inject_theme_css, get_plotly_template, init_theme_state
+from i18n.strings import get_string
 
 st.set_page_config(page_title="Carritos Abandonados", page_icon="🛒", layout="wide")
 
@@ -26,6 +28,7 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
 
 # ✅ Mostrar el sidebar
 sidebar_navigation()
+inject_theme_css()
 
 
 # CSS personalizado
@@ -380,10 +383,10 @@ def display_recovery_strategies(cart_row):
 
 def main():
     # Header de la página
-    st.markdown("""
+    st.markdown(f"""
     <div class="cart-header">
-        <h1>🛒 Carritos Abandonados</h1>
-        <p>Análisis y estrategias de recuperación para maximizar conversiones</p>
+        <h1>{get_string('carts_title', st.session_state.language)}</h1>
+        <p>{get_string('carts_subtitle', st.session_state.language)}</p>
     </div>
     """, unsafe_allow_html=True)
     
