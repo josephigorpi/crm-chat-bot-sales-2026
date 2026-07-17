@@ -25,7 +25,17 @@ COLORS = {
     'gray': '#6B7280'          # Gris
 }
 
-CHART_TEMPLATE = "plotly_white"
+def get_plotly_template(template_name="plotly_white"):
+    """
+    Retorna el template de Plotly según el tema.
+    
+    Args:
+        template_name: Nombre del template ('plotly_white' o 'plotly_dark')
+    
+    Returns:
+        Template de Plotly
+    """
+    return template_name
 
 def create_metric_card_chart(value, title, delta=None, delta_color="normal", template="plotly_white"):
     """
@@ -36,7 +46,7 @@ def create_metric_card_chart(value, title, delta=None, delta_color="normal", tem
         title: Título de la métrica
         delta: Valor delta (opcional)
         delta_color: Color del delta
-        template: Template de Plotly (plotly_white o plotly_dark)
+        template: Template de Plotly
     
     Returns:
         Figure de Plotly
@@ -45,12 +55,12 @@ def create_metric_card_chart(value, title, delta=None, delta_color="normal", tem
     
     # Añadir el valor principal
     fig.add_trace(go.Indicator(
-        mode = "number+delta" if delta else "number",
-        value = value,
-        delta = {'reference': delta, 'relative': True} if delta else None,
-        title = {"text": title},
-        number = {'font': {'size': 40}},
-        domain = {'x': [0, 1], 'y': [0, 1]}
+        mode="number+delta" if delta else "number",
+        value=value,
+        delta={'reference': delta, 'relative': True} if delta else None,
+        title={"text": title},
+        number={'font': {'size': 40}},
+        domain={'x': [0, 1], 'y': [0, 1]}
     ))
     
     fig.update_layout(
@@ -61,14 +71,15 @@ def create_metric_card_chart(value, title, delta=None, delta_color="normal", tem
     
     return fig
 
-def create_conversation_heatmap(conversations_df, language='es', template="plotly_white"):
+
+def create_conversation_heatmap(conversations_df, template="plotly_white", language='es'):
     """
     Crea mapa de calor de conversaciones por día y hora.
     
     Args:
         conversations_df: DataFrame con conversaciones
-        language: Idioma para labels ('es' o 'en')
         template: Template de Plotly
+        language: Idioma para labels ('es' o 'en')
     
     Returns:
         Figure de Plotly
@@ -102,10 +113,9 @@ def create_conversation_heatmap(conversations_df, language='es', template="plotl
     # Ordenar días de la semana
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     day_order_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-    day_order_en = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
     # Mapear nombres de días según idioma
-    day_labels = day_order_es if language == 'es' else day_order_en
+    day_labels = day_order_es if language == 'es' else day_order
     day_mapping = dict(zip(day_order, day_labels))
     heatmap_pivot.index = heatmap_pivot.index.map(day_mapping)
     heatmap_pivot = heatmap_pivot.reindex(day_labels)
@@ -131,6 +141,7 @@ def create_conversation_heatmap(conversations_df, language='es', template="plotl
     
     return fig
 
+
 def create_sales_timeline(orders_df, template="plotly_white", language='es'):
     """
     Crea gráfico de línea temporal de ventas.
@@ -143,6 +154,21 @@ def create_sales_timeline(orders_df, template="plotly_white", language='es'):
     Returns:
         Figure de Plotly
     """
+    if len(orders_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_sales_timeline', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     # Agrupar ventas por día
     orders_df = orders_df.copy()
     orders_df['date'] = pd.to_datetime(orders_df['created_at']).dt.date
@@ -158,7 +184,7 @@ def create_sales_timeline(orders_df, template="plotly_white", language='es'):
     
     fig.update_traces(
         line=dict(width=3),
-        hovertemplate='<b>%{x}</b><br>' + get_string('chart_sales_amount', language) + ': USD %{y:,.2f}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>' + get_string('chart_sales_amount', language) + ': $%{y:,.2f}<extra></extra>'
     )
     
     fig.update_layout(
@@ -170,6 +196,7 @@ def create_sales_timeline(orders_df, template="plotly_white", language='es'):
     )
     
     return fig
+
 
 def create_order_status_donut(orders_df, template="plotly_white", language='es'):
     """
@@ -183,25 +210,31 @@ def create_order_status_donut(orders_df, template="plotly_white", language='es')
     Returns:
         Figure de Plotly
     """
+    if len(orders_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_order_status', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     status_counts = orders_df['status'].value_counts()
     
     # Mapear estados según idioma
-    if language == 'es':
-        status_labels = {
-            'pending': get_string('order_status_pending', language),
-            'processing': get_string('order_status_processing', language),
-            'shipped': get_string('order_status_shipped', language),
-            'delivered': get_string('order_status_delivered', language),
-            'cancelled': get_string('order_status_cancelled', language),
-        }
-    else:
-        status_labels = {
-            'pending': get_string('order_status_pending', language),
-            'processing': get_string('order_status_processing', language),
-            'shipped': get_string('order_status_shipped', language),
-            'delivered': get_string('order_status_delivered', language),
-            'cancelled': get_string('order_status_cancelled', language),
-        }
+    status_labels = {
+        'pending': get_string('order_status_pending', language),
+        'processing': get_string('order_status_processing', language),
+        'shipped': get_string('order_status_shipped', language),
+        'delivered': get_string('order_status_delivered', language),
+        'cancelled': get_string('order_status_cancelled', language),
+    }
     
     labels = [status_labels.get(status, status) for status in status_counts.index]
     
@@ -229,6 +262,7 @@ def create_order_status_donut(orders_df, template="plotly_white", language='es')
     
     return fig
 
+
 def create_messages_by_hour(conversations_df, template="plotly_white", language='es'):
     """
     Crea gráfico de barras de mensajes por hora del día.
@@ -241,6 +275,21 @@ def create_messages_by_hour(conversations_df, template="plotly_white", language=
     Returns:
         Figure de Plotly
     """
+    if len(conversations_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_messages_by_hour', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     conversations_df = conversations_df.copy()
     conversations_df['hour'] = pd.to_datetime(conversations_df['created_at']).dt.hour
     hourly_messages = conversations_df.groupby('hour').size().reset_index(name='count')
@@ -272,6 +321,7 @@ def create_messages_by_hour(conversations_df, template="plotly_white", language=
     
     return fig
 
+
 def create_intent_distribution(conversations_df, template="plotly_white", language='es'):
     """
     Crea gráfico de barras horizontales de intenciones.
@@ -284,6 +334,21 @@ def create_intent_distribution(conversations_df, template="plotly_white", langua
     Returns:
         Figure de Plotly
     """
+    if len(conversations_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_intents', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     intent_counts = conversations_df['intent'].value_counts()
     
     # Mapear intents según idioma
@@ -292,17 +357,23 @@ def create_intent_distribution(conversations_df, template="plotly_white", langua
             'consulta-producto': 'Consulta Producto',
             'seguimiento-pedido': 'Seguimiento Pedido',
             'procesar-pago': 'Procesar Pago',
-            'carrito-abandonado': 'Carrito Abandonado'
+            'carrito-abandonado': 'Carrito Abandonado',
+            'soporte': 'Soporte',
+            'reclamo': 'Reclamo',
+            'consulta-general': 'Consulta General'
         }
     else:
         intent_labels = {
             'consulta-producto': 'Product Inquiry',
             'seguimiento-pedido': 'Order Tracking',
             'procesar-pago': 'Process Payment',
-            'carrito-abandonado': 'Abandoned Cart'
+            'carrito-abandonado': 'Abandoned Cart',
+            'soporte': 'Support',
+            'reclamo': 'Claim',
+            'consulta-general': 'General Inquiry'
         }
     
-    labels = [intent_labels.get(intent, intent) for intent in intent_counts.index]
+    labels = [intent_labels.get(intent, intent.title()) for intent in intent_counts.index]
     
     fig = px.bar(
         x=intent_counts.values,
@@ -325,6 +396,7 @@ def create_intent_distribution(conversations_df, template="plotly_white", langua
     
     return fig
 
+
 def create_top_products_chart(products_df, orders_df, template="plotly_white", language='es'):
     """
     Crea gráfico de top 10 productos más vendidos.
@@ -338,8 +410,24 @@ def create_top_products_chart(products_df, orders_df, template="plotly_white", l
     Returns:
         Figure de Plotly
     """
+    if len(products_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_top_products', language),
+            height=500,
+            template=template
+        )
+        return fig
+    
     # Simular ventas por producto (en datos reales vendría de order_items)
     product_sales = products_df.copy()
+    np.random.seed(42)
     product_sales['sales_count'] = np.random.randint(0, 50, len(products_df))
     
     top_products = product_sales.nlargest(10, 'sales_count')
@@ -368,6 +456,7 @@ def create_top_products_chart(products_df, orders_df, template="plotly_white", l
     
     return fig
 
+
 def create_price_distribution(products_df, template="plotly_white", language='es'):
     """
     Crea histograma de distribución de precios.
@@ -380,6 +469,21 @@ def create_price_distribution(products_df, template="plotly_white", language='es
     Returns:
         Figure de Plotly
     """
+    if len(products_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_price_distribution', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     fig = px.histogram(
         products_df,
         x='price',
@@ -402,6 +506,7 @@ def create_price_distribution(products_df, template="plotly_white", language='es
     
     return fig
 
+
 def create_category_donut(products_df, template="plotly_white", language='es'):
     """
     Crea gráfico de dona de productos por categoría.
@@ -414,14 +519,51 @@ def create_category_donut(products_df, template="plotly_white", language='es'):
     Returns:
         Figure de Plotly
     """
+    if len(products_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_category_donut', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     category_counts = products_df['category'].value_counts()
     
+    # Traducir categorías
+    if language == 'es':
+        category_labels = {
+            'electronics': 'Electrónicos',
+            'clothing': 'Ropa',
+            'books': 'Libros',
+            'home': 'Hogar',
+            'sports': 'Deportes',
+            'beauty': 'Belleza'
+        }
+    else:
+        category_labels = {
+            'electronics': 'Electronics',
+            'clothing': 'Clothing',
+            'books': 'Books',
+            'home': 'Home',
+            'sports': 'Sports',
+            'beauty': 'Beauty'
+        }
+    
+    labels = [category_labels.get(cat, cat.title()) for cat in category_counts.index]
+    
     fig = go.Figure(data=[go.Pie(
-        labels=category_counts.index.str.title(),
+        labels=labels,
         values=category_counts.values,
         hole=.4,
         marker_colors=[COLORS['primary'], COLORS['secondary'], COLORS['accent'], 
-                      COLORS['purple'], COLORS['pink']]
+                      COLORS['purple'], COLORS['pink'], COLORS['info']]
     )])
     
     fig.update_traces(
@@ -439,6 +581,7 @@ def create_category_donut(products_df, template="plotly_white", language='es'):
     
     return fig
 
+
 def create_customer_segments_chart(customers_df, orders_df, template="plotly_white", language='es'):
     """
     Crea gráfico de segmentación de clientes por valor de compra.
@@ -452,6 +595,21 @@ def create_customer_segments_chart(customers_df, orders_df, template="plotly_whi
     Returns:
         Figure de Plotly
     """
+    if len(orders_df) == 0 or len(customers_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_customer_segments', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     # Calcular valor total por cliente
     customer_values = orders_df.groupby('customer_id')['total_amount'].sum().reset_index()
     
@@ -493,45 +651,6 @@ def create_customer_segments_chart(customers_df, orders_df, template="plotly_whi
     
     return fig
 
-def create_conversion_funnel(carts_df, template="plotly_white", language='es'):
-    """
-    Crea embudo de conversión para carritos.
-    
-    Args:
-        carts_df: DataFrame con carritos
-        template: Template de Plotly
-        language: Idioma para labels
-    
-    Returns:
-        Figure de Plotly
-    """
-    total_carts = len(carts_df)
-    abandoned_carts = len(carts_df[carts_df['status'] == 'abandoned'])
-    completed_carts = len(carts_df[carts_df['status'] == 'completed'])
-    
-    if language == 'es':
-        stages = [get_string('chart_conversion_carts_created', language), 
-                  get_string('chart_conversion_carts_completed', language)]
-    else:
-        stages = [get_string('chart_conversion_carts_created', language),
-                  get_string('chart_conversion_carts_completed', language)]
-    
-    values = [total_carts, completed_carts]
-    
-    fig = go.Figure(go.Funnel(
-        y = stages,
-        x = values,
-        textinfo = "value+percent initial",
-        marker_color = [COLORS['info'], COLORS['success']]
-    ))
-    
-    fig.update_layout(
-        title=get_string('chart_conversion_funnel', language),
-        height=400,
-        template=template
-    )
-    
-    return fig
 
 def create_customer_conversion_funnel(conversion_data, template="plotly_white", language='es'):
     """
@@ -545,12 +664,7 @@ def create_customer_conversion_funnel(conversion_data, template="plotly_white", 
     Returns:
         Figure de Plotly
     """
-    stages = list(conversion_data.keys())
-    values = list(conversion_data.values())
-    
-    # Verificar si todos los valores son 0 para evitar RangeError
-    if all(v == 0 for v in values):
-        # Crear un gráfico vacío con mensaje
+    if not conversion_data:
         fig = go.Figure()
         fig.add_annotation(
             text=get_string('chart_conversion_funnel_no_data', language),
@@ -568,15 +682,37 @@ def create_customer_conversion_funnel(conversion_data, template="plotly_white", 
         )
         return fig
     
-    # Asegurar que hay al menos un valor positivo para evitar problemas de rango
+    stages = list(conversion_data.keys())
+    values = list(conversion_data.values())
+    
+    # Verificar si todos los valores son 0 para evitar RangeError
+    if all(v == 0 for v in values):
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_conversion_funnel_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(
+            title=get_string('chart_conversion_funnel_customer', language),
+            height=400,
+            template=template,
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False)
+        )
+        return fig
+    
+    # Asegurar que hay al menos un valor positivo
     min_value = max(1, min(v for v in values if v > 0)) if any(v > 0 for v in values) else 1
     adjusted_values = [max(v, min_value) if v == 0 else v for v in values]
     
     fig = go.Figure(go.Funnel(
-        y = stages,
-        x = adjusted_values,
-        textinfo = "value+percent initial",
-        marker_color = [COLORS['info'], COLORS['primary'], COLORS['secondary'], COLORS['purple'], COLORS['accent']][:len(stages)]
+        y=stages,
+        x=adjusted_values,
+        textinfo="value+percent initial",
+        marker_color=[COLORS['info'], COLORS['primary'], COLORS['secondary'], COLORS['purple'], COLORS['accent']][:len(stages)]
     ))
     
     fig.update_layout(
@@ -587,45 +723,6 @@ def create_customer_conversion_funnel(conversion_data, template="plotly_white", 
     
     return fig
 
-def create_heatmap_conversations(conversations_df, template="plotly_white", language='es'):
-    """
-    Crea mapa de calor de conversaciones por día y hora.
-    
-    Args:
-        conversations_df: DataFrame con conversaciones
-        template: Template de Plotly
-        language: Idioma para labels
-    
-    Returns:
-        Figure de Plotly
-    """
-    conversations_df = conversations_df.copy()
-    conversations_df['hour'] = pd.to_datetime(conversations_df['created_at']).dt.hour
-    conversations_df['day_name'] = pd.to_datetime(conversations_df['created_at']).dt.day_name()
-    
-    # Crear matriz de conversaciones
-    heatmap_data = conversations_df.groupby(['day_name', 'hour']).size().reset_index(name='count')
-    heatmap_pivot = heatmap_data.pivot(index='day_name', columns='hour', values='count').fillna(0)
-    
-    # Ordenar días de la semana
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    heatmap_pivot = heatmap_pivot.reindex(day_order)
-    
-    fig = px.imshow(
-        heatmap_pivot,
-        title=get_string('chart_heatmap', language),
-        color_continuous_scale='Blues',
-        aspect='auto'
-    )
-    
-    fig.update_layout(
-        height=400,
-        template=template,
-        xaxis_title=get_string('chart_heatmap_hour', language),
-        yaxis_title=get_string('chart_heatmap_day', language)
-    )
-    
-    return fig
 
 def create_delivery_time_chart(shipments_df, template="plotly_white", language='es'):
     """
@@ -639,8 +736,25 @@ def create_delivery_time_chart(shipments_df, template="plotly_white", language='
     Returns:
         Figure de Plotly
     """
+    if len(shipments_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_delivery_time_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_delivery_time', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
     # Calcular tiempo de entrega para envíos completados
-    delivered_shipments = shipments_df[shipments_df['status'] == 'delivered'].copy()
+    shipments_df = shipments_df.copy()
+    shipments_df['status_shipment'] = shipments_df['status_shipment'].fillna('no_shipment')
+    delivered_shipments = shipments_df[shipments_df['status_shipment'] == 'delivered'].copy()
     
     if len(delivered_shipments) > 0:
         delivered_shipments['delivery_days'] = (
@@ -649,6 +763,28 @@ def create_delivery_time_chart(shipments_df, template="plotly_white", language='
         ).dt.days
         
         avg_delivery = delivered_shipments.groupby('carrier')['delivery_days'].mean().reset_index()
+        
+        # Traducir nombres de transportistas
+        if language == 'es':
+            carrier_labels = {
+                'FedEx': 'FedEx',
+                'DHL': 'DHL',
+                'UPS': 'UPS',
+                'Correos': 'Correos',
+                'MRW': 'MRW',
+                'SEUR': 'SEUR'
+            }
+        else:
+            carrier_labels = {
+                'FedEx': 'FedEx',
+                'DHL': 'DHL',
+                'UPS': 'UPS',
+                'Correos': 'Correos',
+                'MRW': 'MRW',
+                'SEUR': 'SEUR'
+            }
+        
+        avg_delivery['carrier'] = avg_delivery['carrier'].map(carrier_labels).fillna(avg_delivery['carrier'])
         
         fig = px.bar(
             avg_delivery,
@@ -677,8 +813,88 @@ def create_delivery_time_chart(shipments_df, template="plotly_white", language='
             text=get_string('chart_delivery_time_no_data', language),
             xref="paper", yref="paper",
             x=0.5, y=0.5, xanchor='center', yanchor='middle',
-            showarrow=False, font_size=16
+            showarrow=False, font=dict(size=16)
         )
-        fig.update_layout(height=400, template=template)
+        fig.update_layout(
+            title=get_string('chart_delivery_time', language),
+            height=400,
+            template=template
+        )
+    
+    return fig
+
+
+def create_inventory_by_category_chart(products_df, template="plotly_white", language='es'):
+    """
+    Crea gráfico de inventario por categoría.
+    
+    Args:
+        products_df: DataFrame con productos
+        template: Template de Plotly
+        language: Idioma para labels
+    
+    Returns:
+        Figure de Plotly
+    """
+    if len(products_df) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=get_string('chart_heatmap_no_data', language),
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            title=get_string('chart_inventory_by_category', language),
+            height=400,
+            template=template
+        )
+        return fig
+    
+    # Agrupar inventario por categoría
+    inventory_by_category = products_df.groupby('category')['inventory_count'].sum().reset_index()
+    
+    # Traducir categorías
+    if language == 'es':
+        category_labels = {
+            'electronics': 'Electrónicos',
+            'clothing': 'Ropa',
+            'books': 'Libros',
+            'home': 'Hogar',
+            'sports': 'Deportes',
+            'beauty': 'Belleza'
+        }
+    else:
+        category_labels = {
+            'electronics': 'Electronics',
+            'clothing': 'Clothing',
+            'books': 'Books',
+            'home': 'Home',
+            'sports': 'Sports',
+            'beauty': 'Beauty'
+        }
+    
+    inventory_by_category['category'] = inventory_by_category['category'].map(category_labels).fillna(inventory_by_category['category'])
+    
+    fig = px.bar(
+        inventory_by_category,
+        x='category',
+        y='inventory_count',
+        title=get_string('chart_inventory_by_category', language),
+        color='inventory_count',
+        color_continuous_scale='Blues'
+    )
+    
+    fig.update_traces(
+        hovertemplate='<b>%{x}</b><br>' + get_string('chart_inventory_stock', language) + ': %{y}<extra></extra>'
+    )
+    
+    fig.update_layout(
+        height=400,
+        template=template,
+        xaxis_title=get_string('chart_inventory_category', language),
+        yaxis_title=get_string('chart_inventory_stock', language),
+        coloraxis_showscale=False
+    )
     
     return fig
