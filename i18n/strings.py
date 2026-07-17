@@ -410,6 +410,7 @@ STRINGS = {
         "chart_inventory_by_category": "Total Inventory by Category",
         "chart_inventory_category": "Category",
         "chart_inventory_stock": "Units in Stock",
+# === Páginas pendientes: Clientes, Conversaciones, Carritos, Pedidos, Reportes, Configuración ===
         "customers_title": "👥 Customer Management",
         "customers_subtitle": "Complete analysis of the customer base and smart segmentation",
         "conversations_title": "💬 Conversations & Chatbot",
