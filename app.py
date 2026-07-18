@@ -188,13 +188,7 @@ def dashboard_page():
         # Tabla de últimos pedidos
         st.markdown(f"### {get_string('dashboard_last_orders', st.session_state.language)}")
 
-        st.write("Orders")
-        st.write(data['orders'].columns.tolist())
-        
-        st.write("Customers")
-        st.write(data['customers'].columns.tolist())
 
-        
         customers_info = data['customers'][['id', 'first_name', 'last_name']].rename(
             columns={'id': 'customer_lookup_id'}
         )
@@ -205,8 +199,6 @@ def dashboard_page():
             right_on='customer_lookup_id'
         )
 
-        st.write("Recent Orders")
-        st.write(recent_orders.columns.tolist())
         
         # Formatear datos para mostrar
         display_orders = recent_orders[['id', 'first_name', 'last_name', 'total_amount', 'status', 'created_at']].copy()
