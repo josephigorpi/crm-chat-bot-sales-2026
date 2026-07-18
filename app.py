@@ -189,7 +189,7 @@ def dashboard_page():
         st.markdown(f"### {get_string('dashboard_last_orders', st.session_state.language)}")
         
         recent_orders = data['orders'].merge(
-            data['customers'][['id', 'first_name', 'last_name']], 
+            data['customers'][['customer_id', 'first_name', 'last_name']], 
             left_on='customer_id', 
             right_on='id'
         ).sort_values('created_at', ascending=False).head(10)
