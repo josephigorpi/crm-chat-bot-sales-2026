@@ -195,12 +195,15 @@ def dashboard_page():
         st.write(data['customers'].columns.tolist())
 
         
+        customers_info = data['customers'][['id', 'first_name', 'last_name']].rename(
+            columns={'id': 'customer_lookup_id'}
+        )
+        
         recent_orders = data['orders'].merge(
-            data['customers'][['id', 'first_name', 'last_name']], 
-            left_on='customer_id', 
-            right_on='id'
-        ).sort_values('created_at', ascending=False).head(10)
-
+            customers_info,
+            left_on='customer_id',
+            right_on='customer_lookup_id'
+        )
 
         st.write("Recent Orders")
         st.write(recent_orders.columns.tolist())
